@@ -12,9 +12,11 @@ type VideoService struct {
 }
 
 func NewVideoService() *VideoService {
-	return &VideoService{
-		dataDir: "data",
+	dataDir := "/data" // for docker environment
+	if _, err := os.Stat(dataDir); os.IsNotExist(err) {
+		dataDir = "data" // for local development
 	}
+	return &VideoService{dataDir: dataDir}
 }
 
 func (s *VideoService) ServeVideo(w http.ResponseWriter, r *http.Request, resolution string) {
@@ -26,6 +28,8 @@ func (s *VideoService) ServeVideo(w http.ResponseWriter, r *http.Request, resolu
 		return
 	}
 
+	w.Header().Set("Access-Control-Allow-Origin", "*")
+	w.Header().Set("Access-Control-Allow-Methods", "GET, OPTIONS")
 	w.Header().Set("Content-Type", "video/mp4")
 	w.Header().Set("Accept-Ranges", "bytes")
 
