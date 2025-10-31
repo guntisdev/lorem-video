@@ -2,7 +2,7 @@ package service
 
 import (
 	"fmt"
-	"net/http"
+	"kittens/internal/types"
 	"os"
 	"path/filepath"
 )
@@ -19,19 +19,16 @@ func NewVideoService() *VideoService {
 	return &VideoService{dataDir: dataDir}
 }
 
-func (s *VideoService) ServeVideo(w http.ResponseWriter, r *http.Request, resolution string) {
-	videoPath := filepath.Join(s.dataDir, fmt.Sprintf("%s.mp4", resolution))
-	fmt.Println("Path", videoPath)
-
-	if _, err := os.Stat(videoPath); os.IsNotExist(err) {
-		http.Error(w, "Video not found", http.StatusNotFound)
-		return
+func (s *VideoService) GetVideoPath(resolution string) (string, error) {
+	if _, exists := types.Resolutions[resolution]; !exists {
+		return "", fmt.Errorf("unsupported resolution: %s", resolution)
 	}
 
-	w.Header().Set("Access-Control-Allow-Origin", "*")
-	w.Header().Set("Access-Control-Allow-Methods", "GET, OPTIONS")
-	w.Header().Set("Content-Type", "video/mp4")
-	w.Header().Set("Accept-Ranges", "bytes")
+	videoPath := filepath.Join(s.dataDir, fmt.Sprintf("%s.mp4", resolution))
 
-	http.ServeFile(w, r, videoPath)
+	if _, err := os.Stat(videoPath); os.IsNotExist(err) {
+		return "", fmt.Errorf("video not found: %s", resolution)
+	}
+
+	return videoPath, nil
 }
