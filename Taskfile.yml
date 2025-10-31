@@ -1,0 +1,18 @@
+version: '3'
+
+tasks:
+  run:
+    desc: Run development server with auto-reload
+    cmds:
+      - find . -name '*.go' | entr -r go run ./cmd/server
+
+  build:
+    desc: Build server binary
+    cmds:
+      - go build -o bin/server ./cmd/server
+
+  deps:
+    desc: Download dependencies
+    cmds:
+      - go mod download
+      - go mod tidy
