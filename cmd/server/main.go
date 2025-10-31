@@ -1,0 +1,25 @@
+package main
+
+import (
+	"log"
+	"net/http"
+	"os"
+
+	"kittens/internal/rest"
+)
+
+func main() {
+	r := rest.New()
+	http.HandleFunc("GET /", r.Index)
+	http.HandleFunc("GET /video/{resolution}", r.Video)
+
+	port := os.Getenv("PORT")
+	if port == "" {
+		port = "3000"
+	}
+
+	log.Printf("Server starting on port %s...", port)
+	if err := http.ListenAndServe(":"+port, nil); err != nil {
+		log.Fatal(err)
+	}
+}
