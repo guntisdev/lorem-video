@@ -1,7 +1,6 @@
 package rest
 
 import (
-	"fmt"
 	"kittens/internal/service"
 	"net/http"
 )
@@ -22,6 +21,17 @@ func (rest *Rest) Index(w http.ResponseWriter, r *http.Request) {
 
 func (rest *Rest) Video(w http.ResponseWriter, r *http.Request) {
 	resolution := r.PathValue("resolution")
-	fmt.Println("Resolution: ", resolution)
-	rest.videoService.ServeVideo(w, r, resolution)
+
+	videoPath, err := rest.videoService.GetVideoPath(resolution)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusNotFound)
+		return
+	}
+
+	w.Header().Set("Access-Control-Allow-Origin", "*")
+	w.Header().Set("Access-Control-Allow-Methods", "GET, OPTIONS")
+	w.Header().Set("Content-Type", "video/mp4")
+	w.Header().Set("Accept-Ranges", "bytes")
+
+	http.ServeFile(w, r, videoPath)
 }
