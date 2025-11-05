@@ -20,6 +20,11 @@ var Resolutions = map[string]Resolution{
 	"4k":    {3840, 2160},
 }
 
+const (
+	MinDimension = 64
+	MaxDimension = 3840 // 4K
+)
+
 // ParseResolution parses "720p" or "640x360" format
 func ParseResolution(s string) (Resolution, error) {
 	// Try predefined resolutions first
@@ -41,6 +46,10 @@ func ParseResolution(s string) (Resolution, error) {
 	height, err := strconv.Atoi(parts[1])
 	if err != nil {
 		return Resolution{}, fmt.Errorf("invalid height: %s", parts[1])
+	}
+
+	if width < MinDimension || width > MaxDimension || height < MinDimension || height > MaxDimension {
+		return Resolution{}, fmt.Errorf("resolution out of bounds: %dx%d", width, height)
 	}
 
 	return Resolution{Width: width, Height: height}, nil
