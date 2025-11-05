@@ -11,7 +11,8 @@ import (
 func main() {
 	r := rest.New()
 	http.HandleFunc("GET /", r.Index)
-	http.HandleFunc("GET /video/{resolution}", r.Video)
+	http.HandleFunc("GET /video/get/{resolution}", r.GetVideo)
+	http.HandleFunc("GET /video/resize/{resolution}", r.ResizeVideo)
 
 	port := os.Getenv("PORT")
 	if port == "" {
