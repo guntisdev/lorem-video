@@ -41,7 +41,8 @@ func (s *VideoService) ResizeVideo(ctx context.Context, inputPath, outputPath st
 		cmd := exec.CommandContext(ctx,
 			"ffmpeg",
 			"-i", inputPath,
-			"-vf", fmt.Sprintf("scale=%d:%d", width, height),
+			// if not exact aspect ration then scales up and crops one dimension
+			"-vf", fmt.Sprintf("scale=%d:%d:force_original_aspect_ratio=increase,crop=%d:%d", width, height, width, height),
 			"-c:a", "copy",
 			outputPath,
 		)
