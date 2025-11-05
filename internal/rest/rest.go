@@ -1,7 +1,10 @@
 package rest
 
 import (
+	"encoding/json"
+	"fmt"
 	"kittens/internal/service"
+	"kittens/internal/types"
 	"net/http"
 )
 
@@ -19,7 +22,7 @@ func (rest *Rest) Index(w http.ResponseWriter, r *http.Request) {
 	http.ServeFile(w, r, "web/dist/index.html")
 }
 
-func (rest *Rest) Video(w http.ResponseWriter, r *http.Request) {
+func (rest *Rest) GetVideo(w http.ResponseWriter, r *http.Request) {
 	resolution := r.PathValue("resolution")
 
 	videoPath, err := rest.videoService.GetVideoPath(resolution)
@@ -34,4 +37,29 @@ func (rest *Rest) Video(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Accept-Ranges", "bytes")
 
 	http.ServeFile(w, r, videoPath)
+}
+
+func (rest *Rest) ResizeVideo(w http.ResponseWriter, r *http.Request) {
+	resolution := r.PathValue("resolution")
+
+	res, ok := types.Resolutions[resolution]
+	if !ok {
+		http.Error(w, "invalid resolution", http.StatusBadRequest)
+		return
+	}
+
+	inputPath := "data/720p.mp4"
+	outputPath := fmt.Sprintf("data/%s.mp4", resolution)
+
+	resultCh, errCh := rest.videoService.ResizeVideo(r.Context(), inputPath, outputPath, res.Width, res.Height)
+
+	select {
+	case result := <-resultCh:
+		w.WriteHeader(http.StatusOK)
+		json.NewEncoder(w).Encode(map[string]string{"output": result})
+	case err := <-errCh:
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+	case <-r.Context().Done():
+		http.Error(w, "request cancelled", http.StatusRequestTimeout)
+	}
 }
