@@ -1,4 +1,4 @@
-package types
+package config
 
 type Resolution struct {
 	Width  int

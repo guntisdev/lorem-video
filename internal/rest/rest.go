@@ -3,8 +3,8 @@ package rest
 import (
 	"encoding/json"
 	"fmt"
+	"kittens/internal/config"
 	"kittens/internal/service"
-	"kittens/internal/types"
 	"net/http"
 )
 
@@ -42,14 +42,14 @@ func (rest *Rest) GetVideo(w http.ResponseWriter, r *http.Request) {
 func (rest *Rest) ResizeVideo(w http.ResponseWriter, r *http.Request) {
 	resolution := r.PathValue("resolution")
 
-	res, ok := types.Resolutions[resolution]
+	res, ok := config.Resolutions[resolution]
 	if !ok {
 		http.Error(w, "invalid resolution", http.StatusBadRequest)
 		return
 	}
 
-	inputPath := "data/720p.mp4"
-	outputPath := fmt.Sprintf("data/%s.mp4", resolution)
+	inputPath := fmt.Sprintf("%s/720p.mp4", config.DataDir)
+	outputPath := fmt.Sprintf("%s/%s.mp4", config.DataDir, resolution)
 
 	resultCh, errCh := rest.videoService.ResizeVideo(r.Context(), inputPath, outputPath, res.Width, res.Height)
 
