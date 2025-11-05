@@ -23,7 +23,13 @@ func (rest *Rest) Index(w http.ResponseWriter, r *http.Request) {
 }
 
 func (rest *Rest) GetVideo(w http.ResponseWriter, r *http.Request) {
-	resolution := r.PathValue("resolution")
+	resolutionStr := r.PathValue("resolution")
+	resolution, err := config.ParseResolution(resolutionStr)
+
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
 
 	videoPath, err := rest.videoService.GetVideoPath(resolution)
 	if err != nil {
@@ -40,18 +46,19 @@ func (rest *Rest) GetVideo(w http.ResponseWriter, r *http.Request) {
 }
 
 func (rest *Rest) ResizeVideo(w http.ResponseWriter, r *http.Request) {
-	resolution := r.PathValue("resolution")
+	resolutionStr := r.PathValue("resolution")
+	resolution, err := config.ParseResolution(resolutionStr)
 
-	res, ok := config.Resolutions[resolution]
-	if !ok {
-		http.Error(w, "invalid resolution", http.StatusBadRequest)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
 
-	inputPath := fmt.Sprintf("%s/720p.mp4", config.DataDir)
-	outputPath := fmt.Sprintf("%s/%s.mp4", config.DataDir, resolution)
+	fileName := "1280x720"
+	inputPath := fmt.Sprintf("%s/%s.mp4", config.DataDir, fileName)
+	outputPath := fmt.Sprintf("%s/%dx%d.mp4", config.DataDir, resolution.Width, resolution.Height)
 
-	resultCh, errCh := rest.videoService.ResizeVideo(r.Context(), inputPath, outputPath, res.Width, res.Height)
+	resultCh, errCh := rest.videoService.ResizeVideo(r.Context(), inputPath, outputPath, resolution.Width, resolution.Height)
 
 	select {
 	case result := <-resultCh:

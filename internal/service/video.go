@@ -16,15 +16,11 @@ func NewVideoService() *VideoService {
 	return &VideoService{}
 }
 
-func (s *VideoService) GetVideoPath(resolution string) (string, error) {
-	if _, exists := config.Resolutions[resolution]; !exists {
-		return "", fmt.Errorf("unsupported resolution: %s", resolution)
-	}
-
-	videoPath := filepath.Join(config.DataDir, fmt.Sprintf("%s.mp4", resolution))
+func (s *VideoService) GetVideoPath(resolution config.Resolution) (string, error) {
+	videoPath := filepath.Join(config.DataDir, fmt.Sprintf("%dx%d.mp4", resolution.Width, resolution.Height))
 
 	if _, err := os.Stat(videoPath); os.IsNotExist(err) {
-		return "", fmt.Errorf("video not found: %s", resolution)
+		return "", fmt.Errorf("video not found: %dx%d", resolution.Width, resolution.Height)
 	}
 
 	return videoPath, nil
