@@ -5,10 +5,15 @@ import (
 	"net/http"
 	"os"
 
+	"kittens/internal/config"
 	"kittens/internal/rest"
 )
 
 func main() {
+	if err := config.EnsureDirectories(); err != nil {
+		log.Fatalf("Failed to create directories %v", err)
+	}
+
 	r := rest.New()
 	http.HandleFunc("GET /", r.Index)
 	http.HandleFunc("GET /video/get/{resolution}", r.GetVideo)
