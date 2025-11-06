@@ -6,6 +6,26 @@ import (
 	"strings"
 )
 
+type VideoSpec struct {
+	Resolution string
+	Duration   int // seconds
+	Codec      string
+	FPS        int
+	Audio      string
+	Bitrate    string
+}
+
+var DefaultVideoSpec = VideoSpec{
+	Duration: 60,
+	Codec:    "h264",
+	FPS:      30,
+	Audio:    "aac",
+	Bitrate:  "23crf",
+}
+
+var ValidVideoCodecs = []string{"h264", "h265", "av1", "vp9", "novideo"}   // novideo - shoul be mapped to "none" for ffmpeg
+var ValidAudioCodecs = []string{"aac", "opus", "mp3", "vorbis", "noaudio"} // noaudio - shoul be mapped to "none" for ffmpeg
+
 type Resolution struct {
 	Width  int
 	Height int
