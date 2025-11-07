@@ -11,6 +11,11 @@ tasks:
     cmds:
       - go build -o bin/server ./cmd/server
 
+  test:
+    desc: Test all packages
+    cmds:
+      - gotestsum --format testname
+
   deps:
     desc: Download dependencies
     cmds:
