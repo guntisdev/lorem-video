@@ -16,11 +16,12 @@ type VideoSpec struct {
 }
 
 var DefaultVideoSpec = VideoSpec{
-	Duration: 60,
-	Codec:    "h264",
-	FPS:      30,
-	Audio:    "aac",
-	Bitrate:  "23crf",
+	Resolution: "720p",
+	Duration:   60,
+	Codec:      "h264",
+	FPS:        30,
+	Audio:      "aac",
+	Bitrate:    "23crf",
 }
 
 var ValidVideoCodecs = []string{"h264", "h265", "av1", "vp9", "novideo"}   // novideo - shoul be mapped to "none" for ffmpeg
@@ -32,6 +33,7 @@ type Resolution struct {
 }
 
 var Resolutions = map[string]Resolution{
+	"240p":  {426, 240},
 	"360p":  {640, 360},
 	"480p":  {854, 480},
 	"720p":  {1280, 720},
