@@ -22,7 +22,7 @@ func (rest *Rest) Index(w http.ResponseWriter, r *http.Request) {
 	http.ServeFile(w, r, "web/dist/index.html")
 }
 
-func (rest *Rest) GetVideo(w http.ResponseWriter, r *http.Request) {
+func (rest *Rest) ServeVideo(w http.ResponseWriter, r *http.Request) {
 	resolutionStr := r.PathValue("resolution")
 	resolution, err := config.ParseResolution(resolutionStr)
 
@@ -31,7 +31,7 @@ func (rest *Rest) GetVideo(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	videoPath, err := rest.videoService.GetVideoPath(resolution)
+	videoPath, err := rest.videoService.GetPath(resolution)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusNotFound)
 		return
@@ -43,6 +43,24 @@ func (rest *Rest) GetVideo(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Accept-Ranges", "bytes")
 
 	http.ServeFile(w, r, videoPath)
+}
+
+func (rest *Rest) GetVideoInfo(w http.ResponseWriter, r *http.Request) {
+	name := r.PathValue("name")
+	info, err := rest.videoService.GetInfo(name)
+
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	w.Header().Set("Access-Control-Allow-Origin", "*")
+	w.Header().Set("Content-Type", "application/json")
+
+	if err := json.NewEncoder(w).Encode(info); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
 }
 
 func (rest *Rest) ResizeVideo(w http.ResponseWriter, r *http.Request) {
@@ -58,7 +76,7 @@ func (rest *Rest) ResizeVideo(w http.ResponseWriter, r *http.Request) {
 	inputPath := fmt.Sprintf("%s/%s.mp4", config.DataDir, fileName)
 	outputPath := fmt.Sprintf("%s/%dx%d.mp4", config.DataDir, resolution.Width, resolution.Height)
 
-	resultCh, errCh := rest.videoService.ResizeVideo(r.Context(), inputPath, outputPath, resolution.Width, resolution.Height)
+	resultCh, errCh := rest.videoService.Resize(r.Context(), inputPath, outputPath, resolution.Width, resolution.Height)
 
 	select {
 	case result := <-resultCh:

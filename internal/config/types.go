@@ -28,8 +28,8 @@ var ValidVideoCodecs = []string{"h264", "h265", "av1", "vp9", "novideo"}   // no
 var ValidAudioCodecs = []string{"aac", "opus", "mp3", "vorbis", "noaudio"} // noaudio - shoul be mapped to "none" for ffmpeg
 
 type Resolution struct {
-	Width  int
-	Height int
+	Width  int `json:"width"`
+	Height int `json:"height"`
 }
 
 var Resolutions = map[string]Resolution{

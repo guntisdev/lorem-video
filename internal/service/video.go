@@ -2,6 +2,7 @@ package service
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"kittens/internal/config"
 	"os"
@@ -16,7 +17,7 @@ func NewVideoService() *VideoService {
 	return &VideoService{}
 }
 
-func (s *VideoService) GetVideoPath(resolution config.Resolution) (string, error) {
+func (s *VideoService) GetPath(resolution config.Resolution) (string, error) {
 	videoPath := filepath.Join(config.DataDir, fmt.Sprintf("%dx%d.mp4", resolution.Width, resolution.Height))
 
 	if _, err := os.Stat(videoPath); os.IsNotExist(err) {
@@ -26,7 +27,35 @@ func (s *VideoService) GetVideoPath(resolution config.Resolution) (string, error
 	return videoPath, nil
 }
 
-func (s *VideoService) ResizeVideo(ctx context.Context, inputPath, outputPath string, width, height int) (<-chan string, <-chan error) {
+func (s *VideoService) GetInfo(name string) (*config.FFProbeOutput, error) {
+	videoPath := filepath.Join(config.DataDir, name)
+
+	if _, err := os.Stat(videoPath); os.IsNotExist(err) {
+		return nil, fmt.Errorf("video not found: %s", name)
+	}
+
+	cmd := exec.Command("ffprobe",
+		"-v", "quiet",
+		"-print_format", "json",
+		"-show_format",
+		"-show_streams",
+		videoPath,
+	)
+
+	output, err := cmd.Output()
+	if err != nil {
+		return nil, fmt.Errorf("ffprobe failed: %w", err)
+	}
+
+	var info config.FFProbeOutput
+	if err := json.Unmarshal(output, &info); err != nil {
+		return nil, fmt.Errorf("failed to parse ffprobe output: %w", err)
+	}
+
+	return &info, nil
+}
+
+func (s *VideoService) Resize(ctx context.Context, inputPath, outputPath string, width, height int) (<-chan string, <-chan error) {
 	resultCh := make(chan string, 1)
 	errCh := make(chan error, 1)
 
