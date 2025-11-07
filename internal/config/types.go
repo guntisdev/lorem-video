@@ -20,7 +20,7 @@ type VideoSpec struct {
 var DefaultVideoSpec = VideoSpec{
 	Width:        1280,
 	Height:       720,
-	Duration:     60,
+	Duration:     20,
 	Codec:        "h264",
 	FPS:          30,
 	Bitrate:      "23crf",
@@ -50,6 +50,35 @@ const (
 	MinDimension = 64
 	MaxDimension = 3840 // 4K
 )
+
+func ApplyDefaultVideoSpec(input *VideoSpec) VideoSpec {
+	result := DefaultVideoSpec
+	if input.Width != 0 {
+		result.Width = input.Width
+	}
+	if input.Height != 0 {
+		result.Height = input.Height
+	}
+	if input.Duration != 0 {
+		result.Duration = input.Duration
+	}
+	if input.Codec != "" {
+		result.Codec = input.Codec
+	}
+	if input.FPS != 0 {
+		result.FPS = input.FPS
+	}
+	if input.Bitrate != "" {
+		result.Bitrate = input.Bitrate
+	}
+	if input.AudioCodec != "" {
+		result.AudioCodec = input.AudioCodec
+	}
+	if input.AudioBitrate != 0 {
+		result.AudioBitrate = input.AudioBitrate
+	}
+	return result
+}
 
 // ParseResolution parses "720p" or "640x360" format
 func ParseResolution(s string) (Resolution, error) {

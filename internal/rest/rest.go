@@ -6,6 +6,7 @@ import (
 	"kittens/internal/config"
 	"kittens/internal/service"
 	"net/http"
+	"path/filepath"
 )
 
 type Rest struct {
@@ -63,20 +64,12 @@ func (rest *Rest) GetVideoInfo(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func (rest *Rest) ResizeVideo(w http.ResponseWriter, r *http.Request) {
-	resolutionStr := r.PathValue("resolution")
-	resolution, err := config.ParseResolution(resolutionStr)
-
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
-		return
-	}
-
-	fileName := "1280x720"
-	inputPath := fmt.Sprintf("%s/%s.mp4", config.DataDir, fileName)
-	outputPath := fmt.Sprintf("%s/%dx%d.mp4", config.DataDir, resolution.Width, resolution.Height)
-
-	resultCh, errCh := rest.videoService.Resize(r.Context(), inputPath, outputPath, resolution.Width, resolution.Height)
+func (rest *Rest) Transcode(w http.ResponseWriter, r *http.Request) {
+	params := r.PathValue("params")
+	// TODO put all paths in config
+	inputPath := filepath.Join(config.DataDir, "sourceVideo", "bunny.mp4")
+	outputPath := filepath.Join(config.DataDir, "video", fmt.Sprintf("%s.mp4", params))
+	resultCh, errCh := rest.videoService.Transcode(r.Context(), params, inputPath, outputPath)
 
 	select {
 	case result := <-resultCh:
