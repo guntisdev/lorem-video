@@ -7,21 +7,25 @@ import (
 )
 
 type VideoSpec struct {
-	Resolution string
-	Duration   int // seconds
-	Codec      string
-	FPS        int
-	Audio      string
-	Bitrate    string
+	Width        int
+	Height       int
+	Duration     int // seconds
+	Codec        string
+	FPS          int
+	Bitrate      string // "23crf", "3000cbr", or "3000vbr"
+	AudioCodec   string
+	AudioBitrate int // kbps
 }
 
 var DefaultVideoSpec = VideoSpec{
-	Resolution: "720p",
-	Duration:   60,
-	Codec:      "h264",
-	FPS:        30,
-	Audio:      "aac",
-	Bitrate:    "23crf",
+	Width:        1280,
+	Height:       720,
+	Duration:     60,
+	Codec:        "h264",
+	FPS:          30,
+	Bitrate:      "23crf",
+	AudioCodec:   "aac",
+	AudioBitrate: 128,
 }
 
 var ValidVideoCodecs = []string{"h264", "h265", "av1", "vp9", "novideo"}   // novideo - shoul be mapped to "none" for ffmpeg
