@@ -130,6 +130,7 @@ func (s *VideoService) Transcode(ctx context.Context, paramsStr, inputPath, outp
 		args = append(args,
 			"-c:a", spec.AudioCodec, // audio codec
 			"-b:a", fmt.Sprintf("%dk", spec.AudioBitrate), // audio bitrate
+			"-ac", "2", // force 2 channels (stereo)
 			outputPath,
 		)
 
@@ -141,11 +142,12 @@ func (s *VideoService) Transcode(ctx context.Context, paramsStr, inputPath, outp
 		cmd.Stderr = &stderr
 
 		if err := cmd.Run(); err != nil {
-			// errCh <- err
-
 			errCh <- fmt.Errorf("ffmpeg failed: %w\nOutput: %s", err, stderr.String())
 			return
 		}
+
+		// log ffmpeg output
+		// log.Printf("FFmpeg stderr:\n%s", stderr.String())
 
 		resultCh <- outputPath
 	}()
