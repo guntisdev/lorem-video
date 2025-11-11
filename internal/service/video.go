@@ -136,6 +136,37 @@ func (s *VideoService) Transcode(ctx context.Context, paramsStr, inputPath, outp
 				"-c:v", videoCodec,
 				"-r", fmt.Sprintf("%d", spec.FPS),
 			)
+
+			// Add codec-specific optimizations
+			switch videoCodec {
+			case "libaom-av1":
+				// Speed up AV1 encoding significantly
+				args = append(args,
+					"-cpu-used", "8", // Fastest preset (0-8, 8 is fastest)
+					"-row-mt", "1", // Enable row-based multithreading
+					"-tiles", "2x2", // Enable tile-based encoding for better parallelism
+				)
+			case "libx264":
+				// H.264 optimizations
+				args = append(args,
+					"-preset", "fast", // Balance speed vs compression
+					"-threads", "0", // Use all available CPU threads
+				)
+			case "libx265":
+				// H.265/HEVC optimizations
+				args = append(args,
+					"-preset", "fast", // Balance speed vs compression
+					"-x265-params", "pools=+", // Enable all thread pools
+				)
+			case "libvpx-vp9":
+				// VP9 optimizations
+				args = append(args,
+					"-speed", "4", // Speed preset (0-8, higher = faster)
+					"-tile-columns", "2", // Enable tile-based encoding
+					"-tile-rows", "1", // Enable tile-based encoding
+					"-threads", "8", // Use multiple threads
+				)
+			}
 		} else {
 			args = append(args, "-vn") // no video
 		}
@@ -177,18 +208,20 @@ func (s *VideoService) Transcode(ctx context.Context, paramsStr, inputPath, outp
 
 		cmd := exec.CommandContext(ctx, "ffmpeg", args...)
 
-		log.Printf("Running: ffmpeg %s", strings.Join(args, " "))
+		log.Printf("Starting transcode with command: ffmpeg %s", strings.Join(args, " "))
 
 		var stderr bytes.Buffer
 		cmd.Stderr = &stderr
 
 		if err := cmd.Run(); err != nil {
+			log.Printf("FFmpeg failed with error: %v", err)
+			log.Printf("FFmpeg stderr output: %s", stderr.String())
 			errCh <- fmt.Errorf("ffmpeg failed: %w\nOutput: %s", err, stderr.String())
 			return
 		}
 
-		// log ffmpeg output
-		// log.Printf("FFmpeg stderr:\n%s", stderr.String())
+		log.Printf("Transcode completed successfully. Output file: %s", outputPath)
+		log.Printf("FFmpeg stderr output: %s", stderr.String())
 
 		resultCh <- outputPath
 	}()
