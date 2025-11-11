@@ -16,6 +16,26 @@ tasks:
     cmds:
       - gotestsum --format testname
 
+  test:integration:
+    desc: Run all integration tests (slow, requires FFmpeg)
+    cmds:
+      - gotestsum --format testname -- -tags=integration -v ./internal/service
+
+  test:integration:popular:
+    desc: Run popular combination tests only (faster)
+    cmds:
+      - gotestsum --format testname -- -tags=integration -v -run=TestPopularCombinations ./internal/service
+
+  test:integration:full:
+    desc: Run comprehensive integration tests (very slow)
+    cmds:
+      - gotestsum --format testname -- -tags=integration -v -run=TestVideoTranscodeIntegration ./internal/service
+
+  test:integration:bench:
+    desc: Run integration benchmarks
+    cmds:
+      - go test -tags=integration -bench=. -v ./internal/service
+
   deps:
     desc: Download dependencies
     cmds:
