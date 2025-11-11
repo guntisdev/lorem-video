@@ -2,7 +2,6 @@ package rest
 
 import (
 	"encoding/json"
-	"fmt"
 	"kittens/internal/config"
 	"kittens/internal/service"
 	"net/http"
@@ -68,7 +67,7 @@ func (rest *Rest) Transcode(w http.ResponseWriter, r *http.Request) {
 	params := r.PathValue("params")
 	// TODO put all paths in config
 	inputPath := filepath.Join(config.DataDir, "sourceVideo", "bunny.mp4")
-	outputPath := filepath.Join(config.DataDir, "video", fmt.Sprintf("%s.mp4", params))
+	outputPath := filepath.Join(config.DataDir, "video")
 	resultCh, errCh := rest.videoService.Transcode(r.Context(), params, inputPath, outputPath)
 
 	select {

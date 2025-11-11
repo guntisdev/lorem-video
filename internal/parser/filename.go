@@ -1,7 +1,9 @@
 package parser
 
 import (
+	"fmt"
 	"kittens/internal/config"
+	"path/filepath"
 	"regexp"
 	"slices"
 	"strconv"
@@ -15,11 +17,25 @@ var cbrRegex = regexp.MustCompile(`^(\d+)cbr$`)           // constant bitrate 30
 var vbrRegex = regexp.MustCompile(`^(\d+)vbr$`)           // variable bitrate 3000
 var audioBitrateRegex = regexp.MustCompile(`^(\d+)kbps$`) // 128kbps
 
-// Example: av1_1280x720_30fps_60s_23crf_aac_128kbps
+// Example: av1_1280x720_30fps_60s_23crf_aac_128kbps.mp4
 func ParseFilename(filename string) (*config.VideoSpec, error) {
-	filename = strings.TrimSuffix(filename, ".mp4")
+	// Extract extension/container
+	ext := strings.ToLower(filepath.Ext(filename))
+	if ext != "" {
+		ext = ext[1:] // Remove the dot
+	}
+
+	if ext != "" && !slices.Contains(config.ValidContainers, ext) {
+		return nil, fmt.Errorf("invalid container format: %s (valid formats: %v)", ext, config.ValidContainers)
+	}
+
+	filename = strings.TrimSuffix(filename, filepath.Ext(filename))
 	parts := strings.Split(filename, "_")
 	params := &config.VideoSpec{}
+
+	if ext != "" {
+		params.Container = ext
+	}
 
 	for _, part := range parts {
 		switch {
@@ -78,3 +94,53 @@ func ParseFilename(filename string) (*config.VideoSpec, error) {
 	return params, nil
 }
 
+// GenerateFilename creates a filename string from VideoSpec
+// Example output: av1_1280x720_30fps_60s_23crf_aac_128kbps.mp4
+func GenerateFilename(spec *config.VideoSpec) string {
+	var parts []string
+
+	// Add video codec if specified
+	if spec.Codec != "" {
+		parts = append(parts, spec.Codec)
+	}
+
+	// Add resolution
+	if spec.Width > 0 && spec.Height > 0 {
+		parts = append(parts, fmt.Sprintf("%dx%d", spec.Width, spec.Height))
+	}
+
+	// Add FPS if specified
+	if spec.FPS > 0 {
+		parts = append(parts, fmt.Sprintf("%dfps", spec.FPS))
+	}
+
+	// Add duration if specified
+	if spec.Duration > 0 {
+		parts = append(parts, fmt.Sprintf("%ds", spec.Duration))
+	}
+
+	// Add bitrate if specified
+	if spec.Bitrate != "" {
+		parts = append(parts, spec.Bitrate)
+	}
+
+	// Add audio codec if specified
+	if spec.AudioCodec != "" {
+		parts = append(parts, spec.AudioCodec)
+	}
+
+	// Add audio bitrate if specified
+	if spec.AudioBitrate > 0 {
+		parts = append(parts, fmt.Sprintf("%dkbps", spec.AudioBitrate))
+	}
+
+	// Join parts with underscore
+	filename := strings.Join(parts, "_")
+
+	// Add container extension if specified
+	if spec.Container != "" {
+		filename = fmt.Sprintf("%s.%s", filename, spec.Container)
+	}
+
+	return filename
+}
