@@ -6,6 +6,7 @@ package service
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"kittens/internal/config"
 	"kittens/internal/parser"
 	"os"
@@ -29,7 +30,7 @@ func TestVideoTranscodeIntegration(t *testing.T) {
 
 	// Create a simple test video (1 second, small resolution for speed)
 	inputPath := filepath.Join(tempDir, "test_input.mp4")
-	createTestVideo(t, inputPath)
+	createTestVideo(t, inputPath, 1, 640, 360)
 
 	service := NewVideoService()
 
@@ -187,7 +188,7 @@ func TestPopularCombinations(t *testing.T) {
 
 	tempDir := t.TempDir()
 	inputPath := filepath.Join(tempDir, "test_input.mp4")
-	createTestVideo(t, inputPath)
+	createTestVideo(t, inputPath, 1, 640, 360)
 
 	service := NewVideoService()
 
@@ -253,13 +254,13 @@ func TestPopularCombinations(t *testing.T) {
 	}
 }
 
-func createTestVideo(t *testing.T, outputPath string) {
-	// Create a simple 1-second test video using FFmpeg
+func createTestVideo(t *testing.T, outputPath string, duration int, width, height int) {
+	// Create a test video using FFmpeg with specified duration and size
 	cmd := exec.Command("ffmpeg",
 		"-f", "lavfi",
-		"-i", "testsrc2=duration=1:size=640x360:rate=30",
+		"-i", fmt.Sprintf("testsrc2=duration=%d:size=%dx%d:rate=30", duration, width, height),
 		"-f", "lavfi",
-		"-i", "sine=frequency=1000:duration=1",
+		"-i", fmt.Sprintf("sine=frequency=1000:duration=%d", duration),
 		"-c:v", "libx264",
 		"-c:a", "aac",
 		"-y", // Overwrite output file
@@ -374,57 +375,7 @@ func verifyVideoWithFFProbe(t *testing.T, videoPath, originalParams string) {
 	}
 }
 
-func BenchmarkTranscode(b *testing.B) {
-	if testing.Short() {
-		b.Skip("Skipping benchmark in short mode")
-	}
-
-	// Skip if FFmpeg is not available
-	if _, err := exec.LookPath("ffmpeg"); err != nil {
-		b.Skip("FFmpeg not found, skipping benchmark")
-	}
-
-	tempDir := b.TempDir()
-	inputPath := filepath.Join(tempDir, "test_input.mp4")
-
-	// Create test video once
-	cmd := exec.Command("ffmpeg",
-		"-f", "lavfi",
-		"-i", "testsrc2=duration=1:size=640x360:rate=30",
-		"-f", "lavfi",
-		"-i", "sine=frequency=1000:duration=1",
-		"-c:v", "libx264",
-		"-c:a", "aac",
-		"-y",
-		inputPath,
-	)
-
-	if err := cmd.Run(); err != nil {
-		b.Fatalf("Failed to create test video: %v", err)
-	}
-
-	service := NewVideoService()
-	params := "h264_640x360_30fps_1s_23crf_aac_128kbps.mp4"
-
-	b.ResetTimer()
-
-	for i := 0; i < b.N; i++ {
-		ctx := context.Background()
-		outputPath := tempDir
-
-		resultCh, errCh := service.Transcode(ctx, params, inputPath, outputPath)
-
-		select {
-		case <-resultCh:
-			// Success
-		case err := <-errCh:
-			b.Fatalf("Transcoding failed: %v", err)
-		}
-	}
-}
-
-// TestLongAV1 tests a longer AV1 encoding to see performance with more realistic content
-func TestLongAV1(t *testing.T) {
+func TestLongVideo(t *testing.T) {
 	if testing.Short() {
 		t.Skip("Skipping long test in short mode")
 	}
@@ -438,7 +389,7 @@ func TestLongAV1(t *testing.T) {
 	inputPath := filepath.Join(tempDir, "test_input_long.mp4")
 
 	// Create a longer test video (10 seconds, 1080p for more realistic load)
-	createLongTestVideo(t, inputPath)
+	createTestVideo(t, inputPath, 10, 1920, 1080)
 
 	service := NewVideoService()
 
@@ -503,23 +454,5 @@ func TestLongAV1(t *testing.T) {
 				t.Fatalf("Transcoding timed out after %v", tc.timeout)
 			}
 		})
-	}
-}
-
-func createLongTestVideo(t *testing.T, outputPath string) {
-	// Create a longer, more complex test video (10 seconds, 1080p)
-	cmd := exec.Command("ffmpeg",
-		"-f", "lavfi",
-		"-i", "testsrc2=duration=10:size=1920x1080:rate=30",
-		"-f", "lavfi",
-		"-i", "sine=frequency=1000:duration=10",
-		"-c:v", "libx264",
-		"-c:a", "aac",
-		"-y", // Overwrite output file
-		outputPath,
-	)
-
-	if err := cmd.Run(); err != nil {
-		t.Fatalf("Failed to create long test video: %v", err)
 	}
 }
