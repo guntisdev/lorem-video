@@ -103,7 +103,7 @@ func (s *VideoService) Transcode(ctx context.Context, paramsStr, inputPath, outp
 
 	// Generate proper filename from the VideoSpec
 	filename := parser.GenerateFilename(&spec)
-	outputPath = filepath.Join(filepath.Dir(outputPath), filename)
+	outputPath = filepath.Join(outputPath, filename)
 
 	go func() {
 		defer close(resultCh)
@@ -114,8 +114,30 @@ func (s *VideoService) Transcode(ctx context.Context, paramsStr, inputPath, outp
 			"-t", fmt.Sprintf("%d", spec.Duration),
 			"-vf", fmt.Sprintf("scale=%d:%d:force_original_aspect_ratio=increase,crop=%d:%d",
 				spec.Width, spec.Height, spec.Width, spec.Height),
-			"-c:v", spec.Codec,
-			"-r", fmt.Sprintf("%d", spec.FPS),
+		}
+
+		// Map video codec names to FFmpeg codec names
+		videoCodec := spec.Codec
+		switch spec.Codec {
+		case "av1":
+			videoCodec = "libaom-av1"
+		case "h264":
+			videoCodec = "libx264"
+		case "h265":
+			videoCodec = "libx265"
+		case "vp9":
+			videoCodec = "libvpx-vp9"
+		case "novideo":
+			videoCodec = "none"
+		}
+
+		if videoCodec != "none" {
+			args = append(args,
+				"-c:v", videoCodec,
+				"-r", fmt.Sprintf("%d", spec.FPS),
+			)
+		} else {
+			args = append(args, "-vn") // no video
 		}
 
 		// Bitrate handling
@@ -131,12 +153,27 @@ func (s *VideoService) Transcode(ctx context.Context, paramsStr, inputPath, outp
 		}
 
 		// Audio
-		args = append(args,
-			"-c:a", spec.AudioCodec, // audio codec
-			"-b:a", fmt.Sprintf("%dk", spec.AudioBitrate), // audio bitrate
-			"-ac", "2", // force 2 channels (stereo)
-			outputPath,
-		)
+		audioCodec := spec.AudioCodec
+		// Map audio codec names to FFmpeg codec names
+		switch spec.AudioCodec {
+		case "opus":
+			audioCodec = "libopus"
+		case "noaudio":
+			audioCodec = "none"
+			// aac, mp3, vorbis use their default names
+		}
+
+		if audioCodec != "none" {
+			args = append(args,
+				"-c:a", audioCodec, // audio codec
+				"-b:a", fmt.Sprintf("%dk", spec.AudioBitrate), // audio bitrate
+				"-ac", "2", // force 2 channels (stereo)
+			)
+		} else {
+			args = append(args, "-an") // no audio
+		}
+
+		args = append(args, outputPath)
 
 		cmd := exec.CommandContext(ctx, "ffmpeg", args...)
 

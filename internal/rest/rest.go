@@ -67,7 +67,7 @@ func (rest *Rest) Transcode(w http.ResponseWriter, r *http.Request) {
 	params := r.PathValue("params")
 	// TODO put all paths in config
 	inputPath := filepath.Join(config.DataDir, "sourceVideo", "bunny.mp4")
-	outputPath := filepath.Join(config.DataDir, "video")
+	outputPath := config.VideoDir
 	resultCh, errCh := rest.videoService.Transcode(r.Context(), params, inputPath, outputPath)
 
 	select {

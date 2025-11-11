@@ -7,6 +7,7 @@ import (
 )
 
 var DataDir = getDataDir()
+var VideoDir = filepath.Join(DataDir, "video")
 
 func getDataDir() string {
 	if _, err := os.Stat("/data"); err == nil {
