@@ -21,11 +21,6 @@ tasks:
     cmds:
       - gotestsum --format testname -- -tags=integration -v ./internal/service
 
-  test:integration:long:
-    desc: Run a longer AV1 test to see encoding performance
-    cmds:
-      - gotestsum --format testname -- -tags=integration -v -run=TestLongAV1 ./internal/service
-
   deps:
     desc: Download dependencies
     cmds:
