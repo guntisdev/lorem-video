@@ -422,3 +422,104 @@ func BenchmarkTranscode(b *testing.B) {
 		}
 	}
 }
+
+// TestLongAV1 tests a longer AV1 encoding to see performance with more realistic content
+func TestLongAV1(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping long test in short mode")
+	}
+
+	// Skip if FFmpeg is not available
+	if _, err := exec.LookPath("ffmpeg"); err != nil {
+		t.Skip("FFmpeg not found, skipping integration test")
+	}
+
+	tempDir := t.TempDir()
+	inputPath := filepath.Join(tempDir, "test_input_long.mp4")
+
+	// Create a longer test video (10 seconds, 1080p for more realistic load)
+	createLongTestVideo(t, inputPath)
+
+	service := NewVideoService()
+
+	longTests := []struct {
+		name       string
+		params     string
+		expectFile string
+		timeout    time.Duration
+	}{
+		{
+			name:       "AV1/Opus/WebM (Long 10s 1080p)",
+			params:     "av1_1920x1080_30fps_10s_28crf_opus_128kbps.webm",
+			expectFile: "av1_1920x1080_30fps_10s_28crf_opus_128kbps.webm",
+			timeout:    3 * time.Minute, // Generous timeout for AV1
+		},
+		{
+			name:       "VP9/Opus/WebM (Long 10s 1080p)",
+			params:     "vp9_1920x1080_30fps_10s_25crf_opus_128kbps.webm",
+			expectFile: "vp9_1920x1080_30fps_10s_25crf_opus_128kbps.webm",
+			timeout:    2 * time.Minute,
+		},
+		{
+			name:       "H.264/AAC/MP4 (Long 10s 1080p)",
+			params:     "h264_1920x1080_30fps_10s_23crf_aac_128kbps.mp4",
+			expectFile: "h264_1920x1080_30fps_10s_23crf_aac_128kbps.mp4",
+			timeout:    1 * time.Minute,
+		},
+	}
+
+	for _, tc := range longTests {
+		t.Run(tc.name, func(t *testing.T) {
+			ctx, cancel := context.WithTimeout(context.Background(), tc.timeout)
+			defer cancel()
+
+			start := time.Now()
+			outputPath := tempDir
+			resultCh, errCh := service.Transcode(ctx, tc.params, inputPath, outputPath)
+
+			select {
+			case result := <-resultCh:
+				duration := time.Since(start)
+
+				expectedFile := filepath.Join(tempDir, tc.expectFile)
+				if result != expectedFile {
+					t.Errorf("Expected output path %s, got %s", expectedFile, result)
+				}
+
+				info, err := os.Stat(result)
+				if err != nil {
+					t.Fatalf("Output file not found: %v", err)
+				}
+				if info.Size() == 0 {
+					t.Fatal("Output file is empty")
+				}
+
+				t.Logf("🎬 %s completed in %v (file size: %d bytes)", tc.name, duration, info.Size())
+
+			case err := <-errCh:
+				t.Fatalf("Transcoding failed: %v", err)
+
+			case <-ctx.Done():
+				t.Fatalf("Transcoding timed out after %v", tc.timeout)
+			}
+		})
+	}
+}
+
+func createLongTestVideo(t *testing.T, outputPath string) {
+	// Create a longer, more complex test video (10 seconds, 1080p)
+	cmd := exec.Command("ffmpeg",
+		"-f", "lavfi",
+		"-i", "testsrc2=duration=10:size=1920x1080:rate=30",
+		"-f", "lavfi",
+		"-i", "sine=frequency=1000:duration=10",
+		"-c:v", "libx264",
+		"-c:a", "aac",
+		"-y", // Overwrite output file
+		outputPath,
+	)
+
+	if err := cmd.Run(); err != nil {
+		t.Fatalf("Failed to create long test video: %v", err)
+	}
+}
