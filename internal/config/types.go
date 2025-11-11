@@ -14,7 +14,8 @@ type VideoSpec struct {
 	FPS          int
 	Bitrate      string // "23crf", "3000cbr", or "3000vbr"
 	AudioCodec   string
-	AudioBitrate int // kbps
+	AudioBitrate int    // kbps
+	Container    string // file extension/container format
 }
 
 var DefaultVideoSpec = VideoSpec{
@@ -26,10 +27,12 @@ var DefaultVideoSpec = VideoSpec{
 	Bitrate:      "23crf",
 	AudioCodec:   "aac",
 	AudioBitrate: 128,
+	Container:    "mp4",
 }
 
 var ValidVideoCodecs = []string{"h264", "h265", "av1", "vp9", "novideo"}   // novideo - shoul be mapped to "none" for ffmpeg
 var ValidAudioCodecs = []string{"aac", "opus", "mp3", "vorbis", "noaudio"} // noaudio - shoul be mapped to "none" for ffmpeg
+var ValidContainers = []string{"mp4", "webm"}
 
 type Resolution struct {
 	Width  int `json:"width"`
@@ -76,6 +79,9 @@ func ApplyDefaultVideoSpec(input *VideoSpec) VideoSpec {
 	}
 	if input.AudioBitrate != 0 {
 		result.AudioBitrate = input.AudioBitrate
+	}
+	if input.Container != "" {
+		result.Container = input.Container
 	}
 	return result
 }

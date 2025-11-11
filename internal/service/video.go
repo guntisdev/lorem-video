@@ -101,6 +101,10 @@ func (s *VideoService) Transcode(ctx context.Context, paramsStr, inputPath, outp
 
 	spec := config.ApplyDefaultVideoSpec(inputParams)
 
+	// Generate proper filename from the VideoSpec
+	filename := parser.GenerateFilename(&spec)
+	outputPath = filepath.Join(filepath.Dir(outputPath), filename)
+
 	go func() {
 		defer close(resultCh)
 		defer close(errCh)
