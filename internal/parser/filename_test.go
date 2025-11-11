@@ -383,3 +383,56 @@ func TestRoundTripFilename(t *testing.T) {
 		t.Errorf("Container = %v, want %v", parsedSpec.Container, originalSpec.Container)
 	}
 }
+
+// Fuzz test to find edge cases in filename parsing
+func FuzzParseFilename(f *testing.F) {
+	// Seed with known good inputs
+	f.Add("h264_1280x720_30fps_60s_23crf_aac_128kbps.mp4")
+	f.Add("vp9_720p_30fps_10s_25crf_opus_128kbps.webm")
+	f.Add("av1_4k_60fps_120s_28crf_noaudio.webm")
+	f.Add("")
+	f.Add("invalid")
+
+	f.Fuzz(func(t *testing.T, filename string) {
+		// ParseFilename should never crash, regardless of input
+		spec, err := ParseFilename(filename)
+
+		// If parsing succeeds, check invariants
+		if err == nil && spec != nil {
+			// Dimensions should never be negative
+			if spec.Width < 0 {
+				t.Errorf("Width should not be negative: %d", spec.Width)
+			}
+			if spec.Height < 0 {
+				t.Errorf("Height should not be negative: %d", spec.Height)
+			}
+
+			// FPS should be reasonable
+			if spec.FPS < 0 {
+				t.Errorf("FPS should not be negative: %d", spec.FPS)
+			}
+			if spec.FPS > 1000 {
+				t.Errorf("FPS seems unreasonable: %d", spec.FPS)
+			}
+
+			// Duration should be reasonable
+			if spec.Duration < 0 {
+				t.Errorf("Duration should not be negative: %d", spec.Duration)
+			}
+
+			// Audio bitrate should be reasonable
+			if spec.AudioBitrate < 0 {
+				t.Errorf("AudioBitrate should not be negative: %d", spec.AudioBitrate)
+			}
+			// Allow high bitrates for professional/archival audio (up to ~10MB/s)
+			if spec.AudioBitrate > 10000000 {
+				t.Errorf("AudioBitrate seems unreasonable: %d", spec.AudioBitrate)
+			}
+
+			// Container should be valid if specified
+			if spec.Container != "" && spec.Container != "mp4" && spec.Container != "webm" {
+				t.Errorf("Invalid container: %s", spec.Container)
+			}
+		}
+	})
+}

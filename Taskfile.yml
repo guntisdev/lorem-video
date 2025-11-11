@@ -19,7 +19,7 @@ tasks:
   test:integration:
     desc: Run all integration tests (requires FFmpeg)
     cmds:
-      - gotestsum --format testname -- -tags=integration -v ./internal/service
+      - gotestsum --format testname -- -tags=integration -v ./...
 
   deps:
     desc: Download dependencies
