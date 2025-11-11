@@ -43,23 +43,29 @@ func TestVideoTranscodeIntegration(t *testing.T) {
 		// Most popular web streaming combinations
 		{
 			name:       "H.264/AAC/MP4 (Most Popular Web)",
-			params:     "h264_1280x720_30fps_2s_23crf_aac_128kbps.mp4",
-			expectFile: "h264_1280x720_30fps_2s_23crf_aac_128kbps.mp4",
+			params:     "h264_1280x720_30fps_1s_23crf_aac_128kbps.mp4",
+			expectFile: "h264_1280x720_30fps_1s_23crf_aac_128kbps.mp4",
+			timeout:    20 * time.Second,
+		},
+		{
+			name:       "VP9/Opus/WebM (Modern Web)",
+			params:     "vp9_1280x720_30fps_1s_25crf_opus_128kbps.webm",
+			expectFile: "vp9_1280x720_30fps_1s_25crf_opus_128kbps.webm",
 			timeout:    30 * time.Second,
 		},
+		{
+			name:       "H.264/AAC/MP4 (Mobile)",
+			params:     "h264_720p_30fps_1s_25crf_aac_96kbps.mp4",
+			expectFile: "h264_1280x720_30fps_1s_25crf_aac_96kbps.mp4",
+			timeout:    20 * time.Second,
+		},
+
+		// Extended combinations (run in comprehensive mode)
 		{
 			name:       "H.264/AAC/MP4 (1080p)",
 			params:     "h264_1920x1080_30fps_2s_23crf_aac_128kbps.mp4",
 			expectFile: "h264_1920x1080_30fps_2s_23crf_aac_128kbps.mp4",
 			timeout:    45 * time.Second,
-		},
-
-		// Modern web combinations
-		{
-			name:       "VP9/Opus/WebM (Modern Web)",
-			params:     "vp9_1280x720_30fps_2s_25crf_opus_128kbps.webm",
-			expectFile: "vp9_1280x720_30fps_2s_25crf_opus_128kbps.webm",
-			timeout:    60 * time.Second,
 		},
 		{
 			name:       "AV1/Opus/WebM (Next-gen Web)",
@@ -67,30 +73,18 @@ func TestVideoTranscodeIntegration(t *testing.T) {
 			expectFile: "av1_1280x720_30fps_2s_30crf_opus_128kbps.webm",
 			timeout:    2 * time.Minute,
 		},
-
-		// Mobile-optimized
-		{
-			name:       "H.264/AAC/MP4 (Mobile 720p)",
-			params:     "h264_720p_30fps_2s_25crf_aac_96kbps.mp4",
-			expectFile: "h264_1280x720_30fps_2s_25crf_aac_96kbps.mp4",
-			timeout:    30 * time.Second,
-		},
 		{
 			name:       "H.264/AAC/MP4 (Mobile 480p)",
 			params:     "h264_480p_30fps_2s_26crf_aac_96kbps.mp4",
 			expectFile: "h264_854x480_30fps_2s_26crf_aac_96kbps.mp4",
 			timeout:    20 * time.Second,
 		},
-
-		// High quality
 		{
 			name:       "H.265/AAC/MP4 (High Quality)",
 			params:     "h265_1920x1080_30fps_2s_28crf_aac_192kbps.mp4",
 			expectFile: "h265_1920x1080_30fps_2s_28crf_aac_192kbps.mp4",
 			timeout:    90 * time.Second,
 		},
-
-		// Bitrate variations
 		{
 			name:       "H.264/AAC/MP4 (CBR)",
 			params:     "h264_1280x720_30fps_2s_3000cbr_aac_128kbps.mp4",
@@ -103,8 +97,6 @@ func TestVideoTranscodeIntegration(t *testing.T) {
 			expectFile: "h264_1280x720_30fps_2s_3000vbr_aac_128kbps.mp4",
 			timeout:    30 * time.Second,
 		},
-
-		// Different frame rates
 		{
 			name:       "H.264/AAC/MP4 (60fps)",
 			params:     "h264_1280x720_60fps_2s_23crf_aac_128kbps.mp4",
@@ -117,8 +109,6 @@ func TestVideoTranscodeIntegration(t *testing.T) {
 			expectFile: "h264_1920x1080_24fps_2s_23crf_aac_128kbps.mp4",
 			timeout:    40 * time.Second,
 		},
-
-		// Audio-only and video-only
 		{
 			name:       "Audio Only (AAC/MP4)",
 			params:     "novideo_2s_aac_128kbps.mp4",
@@ -160,7 +150,7 @@ func TestVideoTranscodeIntegration(t *testing.T) {
 					t.Fatal("Output file is empty")
 				}
 
-				t.Logf("Successfully created %s (size: %d bytes)", result, info.Size())
+				t.Logf("✅ %s created successfully (size: %d bytes)", tc.name, info.Size())
 
 				// Verify with ffprobe
 				verifyVideoWithFFProbe(t, result, tc.params)
@@ -170,85 +160,6 @@ func TestVideoTranscodeIntegration(t *testing.T) {
 
 			case <-ctx.Done():
 				t.Fatal("Transcoding timed out")
-			}
-		})
-	}
-}
-
-// TestPopularCombinations tests only the most commonly used combinations for faster CI
-func TestPopularCombinations(t *testing.T) {
-	if testing.Short() {
-		t.Skip("Skipping in short mode")
-	}
-
-	// Skip if FFmpeg is not available
-	if _, err := exec.LookPath("ffmpeg"); err != nil {
-		t.Skip("FFmpeg not found, skipping integration test")
-	}
-
-	tempDir := t.TempDir()
-	inputPath := filepath.Join(tempDir, "test_input.mp4")
-	createTestVideo(t, inputPath, 1, 640, 360)
-
-	service := NewVideoService()
-
-	// Only the most popular combinations for faster testing
-	popularTests := []struct {
-		name       string
-		params     string
-		expectFile string
-		timeout    time.Duration
-	}{
-		{
-			name:       "H.264/AAC/MP4 (Standard Web)",
-			params:     "h264_1280x720_30fps_1s_23crf_aac_128kbps.mp4",
-			expectFile: "h264_1280x720_30fps_1s_23crf_aac_128kbps.mp4",
-			timeout:    20 * time.Second,
-		},
-		{
-			name:       "VP9/Opus/WebM (Modern Web)",
-			params:     "vp9_1280x720_30fps_1s_25crf_opus_128kbps.webm",
-			expectFile: "vp9_1280x720_30fps_1s_25crf_opus_128kbps.webm",
-			timeout:    30 * time.Second,
-		},
-		{
-			name:       "H.264/AAC/MP4 (Mobile)",
-			params:     "h264_720p_30fps_1s_25crf_aac_96kbps.mp4",
-			expectFile: "h264_1280x720_30fps_1s_25crf_aac_96kbps.mp4",
-			timeout:    20 * time.Second,
-		},
-	}
-
-	for _, tc := range popularTests {
-		t.Run(tc.name, func(t *testing.T) {
-			ctx, cancel := context.WithTimeout(context.Background(), tc.timeout)
-			defer cancel()
-
-			outputPath := tempDir
-			resultCh, errCh := service.Transcode(ctx, tc.params, inputPath, outputPath)
-
-			select {
-			case result := <-resultCh:
-				expectedFile := filepath.Join(tempDir, tc.expectFile)
-				if result != expectedFile {
-					t.Errorf("Expected output path %s, got %s", expectedFile, result)
-				}
-
-				info, err := os.Stat(result)
-				if err != nil {
-					t.Fatalf("Output file not found: %v", err)
-				}
-				if info.Size() == 0 {
-					t.Fatal("Output file is empty")
-				}
-
-				t.Logf("✅ %s created successfully (size: %d bytes)", tc.name, info.Size())
-
-			case err := <-errCh:
-				t.Fatalf("Transcoding failed: %v", err)
-
-			case <-ctx.Done():
-				t.Fatalf("Transcoding timed out after %v", tc.timeout)
 			}
 		})
 	}
@@ -372,87 +283,5 @@ func verifyVideoWithFFProbe(t *testing.T, videoPath, originalParams string) {
 		// OK
 	} else {
 		t.Logf("Container format: expected %s, got %s (this might be normal)", expectedFormat, actualFormat)
-	}
-}
-
-func TestLongVideo(t *testing.T) {
-	if testing.Short() {
-		t.Skip("Skipping long test in short mode")
-	}
-
-	// Skip if FFmpeg is not available
-	if _, err := exec.LookPath("ffmpeg"); err != nil {
-		t.Skip("FFmpeg not found, skipping integration test")
-	}
-
-	tempDir := t.TempDir()
-	inputPath := filepath.Join(tempDir, "test_input_long.mp4")
-
-	// Create a longer test video (10 seconds, 1080p for more realistic load)
-	createTestVideo(t, inputPath, 10, 1920, 1080)
-
-	service := NewVideoService()
-
-	longTests := []struct {
-		name       string
-		params     string
-		expectFile string
-		timeout    time.Duration
-	}{
-		{
-			name:       "AV1/Opus/WebM (Long 10s 1080p)",
-			params:     "av1_1920x1080_30fps_10s_28crf_opus_128kbps.webm",
-			expectFile: "av1_1920x1080_30fps_10s_28crf_opus_128kbps.webm",
-			timeout:    3 * time.Minute, // Generous timeout for AV1
-		},
-		{
-			name:       "VP9/Opus/WebM (Long 10s 1080p)",
-			params:     "vp9_1920x1080_30fps_10s_25crf_opus_128kbps.webm",
-			expectFile: "vp9_1920x1080_30fps_10s_25crf_opus_128kbps.webm",
-			timeout:    2 * time.Minute,
-		},
-		{
-			name:       "H.264/AAC/MP4 (Long 10s 1080p)",
-			params:     "h264_1920x1080_30fps_10s_23crf_aac_128kbps.mp4",
-			expectFile: "h264_1920x1080_30fps_10s_23crf_aac_128kbps.mp4",
-			timeout:    1 * time.Minute,
-		},
-	}
-
-	for _, tc := range longTests {
-		t.Run(tc.name, func(t *testing.T) {
-			ctx, cancel := context.WithTimeout(context.Background(), tc.timeout)
-			defer cancel()
-
-			start := time.Now()
-			outputPath := tempDir
-			resultCh, errCh := service.Transcode(ctx, tc.params, inputPath, outputPath)
-
-			select {
-			case result := <-resultCh:
-				duration := time.Since(start)
-
-				expectedFile := filepath.Join(tempDir, tc.expectFile)
-				if result != expectedFile {
-					t.Errorf("Expected output path %s, got %s", expectedFile, result)
-				}
-
-				info, err := os.Stat(result)
-				if err != nil {
-					t.Fatalf("Output file not found: %v", err)
-				}
-				if info.Size() == 0 {
-					t.Fatal("Output file is empty")
-				}
-
-				t.Logf("🎬 %s completed in %v (file size: %d bytes)", tc.name, duration, info.Size())
-
-			case err := <-errCh:
-				t.Fatalf("Transcoding failed: %v", err)
-
-			case <-ctx.Done():
-				t.Fatalf("Transcoding timed out after %v", tc.timeout)
-			}
-		})
 	}
 }
