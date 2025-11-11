@@ -104,13 +104,13 @@ func GenerateFilename(spec *config.VideoSpec) string {
 		parts = append(parts, spec.Codec)
 	}
 
-	// Add resolution
-	if spec.Width > 0 && spec.Height > 0 {
+	// Add resolution (only if we have actual video, not novideo)
+	if spec.Width > 0 && spec.Height > 0 && spec.Codec != "novideo" {
 		parts = append(parts, fmt.Sprintf("%dx%d", spec.Width, spec.Height))
 	}
 
-	// Add FPS if specified
-	if spec.FPS > 0 {
+	// Add FPS if specified (only if we have actual video, not novideo)
+	if spec.FPS > 0 && spec.Codec != "novideo" {
 		parts = append(parts, fmt.Sprintf("%dfps", spec.FPS))
 	}
 
@@ -119,8 +119,8 @@ func GenerateFilename(spec *config.VideoSpec) string {
 		parts = append(parts, fmt.Sprintf("%ds", spec.Duration))
 	}
 
-	// Add bitrate if specified
-	if spec.Bitrate != "" {
+	// Add bitrate if specified (only if we have actual video, not novideo)
+	if spec.Bitrate != "" && spec.Codec != "novideo" {
 		parts = append(parts, spec.Bitrate)
 	}
 
@@ -129,8 +129,8 @@ func GenerateFilename(spec *config.VideoSpec) string {
 		parts = append(parts, spec.AudioCodec)
 	}
 
-	// Add audio bitrate if specified
-	if spec.AudioBitrate > 0 {
+	// Add audio bitrate if specified and audio codec is not "noaudio"
+	if spec.AudioBitrate > 0 && spec.AudioCodec != "noaudio" {
 		parts = append(parts, fmt.Sprintf("%dkbps", spec.AudioBitrate))
 	}
 
