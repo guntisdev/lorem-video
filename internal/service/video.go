@@ -59,46 +59,45 @@ func (s *VideoService) GetInfo(name string) (*config.FFProbeOutput, error) {
 	return &info, nil
 }
 
-func (s *VideoService) Resize(ctx context.Context, inputPath, outputPath string, width, height int) (<-chan string, <-chan error) {
-	resultCh := make(chan string, 1)
-	errCh := make(chan error, 1)
+// func (s *VideoService) CreateDefault() error {
+// 	inputPath := config.AppPaths.DefaultSourceVideo
+// 	filenameNoExt := strings.TrimSuffix(filepath.Base(inputPath), filepath.Ext(inputPath))
+// 	outputPath := filepath.Join(config.AppPaths.Video, filenameNoExt)
+// 	if err := os.MkdirAll(outputPath, 0755); err != nil {
+// 		return err
+// 	}
+//
+// 	for _, spec := range config.DefaultPregenSpecs {
+//
+// 	}
+// }
 
-	go func() {
-		defer close(resultCh)
-		defer close(errCh)
-
-		cmd := exec.CommandContext(ctx,
-			"ffmpeg",
-			"-i", inputPath,
-			// if not exact aspect ration then scales up and crops one dimension
-			"-vf", fmt.Sprintf("scale=%d:%d:force_original_aspect_ratio=increase,crop=%d:%d", width, height, width, height),
-			"-c:a", "copy",
-			outputPath,
-		)
-
-		if err := cmd.Run(); err != nil {
-			errCh <- err
-			return
-		}
-
-		resultCh <- outputPath
-	}()
-
-	return resultCh, errCh
-}
-
-func (s *VideoService) Transcode(ctx context.Context, paramsStr, inputPath, outputPath string) (<-chan string, <-chan error) {
-	resultCh := make(chan string, 1)
-	errCh := make(chan error, 1)
-
+// TranscodeFromParams parses parameters and calls Transcode with appropriate paths
+func (s *VideoService) TranscodeFromParams(ctx context.Context, paramsStr string) (<-chan string, <-chan error) {
+	// Parse the parameters
 	inputParams, err := parser.ParseFilename(paramsStr)
 	if err != nil {
+		errCh := make(chan error, 1)
 		errCh <- err
 		close(errCh)
 		return nil, errCh
 	}
 
+	// Apply defaults to create complete VideoSpec
 	spec := config.ApplyDefaultVideoSpec(inputParams)
+
+	// Set up paths
+	inputPath := config.AppPaths.DefaultSourceVideo
+	outputPath := config.AppPaths.Video
+
+	// Call the main Transcode function
+	return s.Transcode(ctx, spec, inputPath, outputPath)
+}
+
+// Transcode performs video transcoding with the given VideoSpec and paths
+func (s *VideoService) Transcode(ctx context.Context, spec config.VideoSpec, inputPath, outputPath string) (<-chan string, <-chan error) {
+	resultCh := make(chan string, 1)
+	errCh := make(chan error, 1)
 
 	// Generate proper filename from the VideoSpec
 	filename := parser.GenerateFilename(&spec)

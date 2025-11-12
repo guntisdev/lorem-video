@@ -5,7 +5,6 @@ import (
 	"kittens/internal/config"
 	"kittens/internal/service"
 	"net/http"
-	"path/filepath"
 )
 
 type Rest struct {
@@ -45,6 +44,10 @@ func (rest *Rest) ServeVideo(w http.ResponseWriter, r *http.Request) {
 	http.ServeFile(w, r, videoPath)
 }
 
+func (rest *Rest) CreateDefault(w http.ResponseWriter, r *http.Request) {
+
+}
+
 func (rest *Rest) GetVideoInfo(w http.ResponseWriter, r *http.Request) {
 	name := r.PathValue("name")
 	info, err := rest.videoService.GetInfo(name)
@@ -65,9 +68,7 @@ func (rest *Rest) GetVideoInfo(w http.ResponseWriter, r *http.Request) {
 
 func (rest *Rest) Transcode(w http.ResponseWriter, r *http.Request) {
 	params := r.PathValue("params")
-	inputPath := filepath.Join(config.AppPaths.SourceVideo, "bunny.mp4")
-	outputPath := config.AppPaths.Video
-	resultCh, errCh := rest.videoService.Transcode(r.Context(), params, inputPath, outputPath)
+	resultCh, errCh := rest.videoService.TranscodeFromParams(r.Context(), params)
 
 	select {
 	case result := <-resultCh:

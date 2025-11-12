@@ -12,6 +12,9 @@ type Paths struct {
 	SourceVideo string
 	Logs        string
 	Tmp         string
+
+	// Default files
+	DefaultSourceVideo string // bunny.mp4 path
 }
 
 // Global paths instance - initialized once and reused everywhere
@@ -19,13 +22,17 @@ var AppPaths = initPaths()
 
 func initPaths() *Paths {
 	dataDir := getDataDir()
+	sourceVideoDir := filepath.Join(dataDir, "sourceVideo")
 
 	return &Paths{
 		Data:        dataDir,
 		Video:       filepath.Join(dataDir, "video"),
-		SourceVideo: filepath.Join(dataDir, "sourceVideo"),
+		SourceVideo: sourceVideoDir,
 		Logs:        filepath.Join(dataDir, "logs"),
 		Tmp:         filepath.Join(dataDir, "tmp"),
+
+		// Default files
+		DefaultSourceVideo: filepath.Join(sourceVideoDir, "bunny.mp4"),
 	}
 }
 
