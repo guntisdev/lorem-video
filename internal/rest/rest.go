@@ -45,7 +45,27 @@ func (rest *Rest) ServeVideo(w http.ResponseWriter, r *http.Request) {
 }
 
 func (rest *Rest) CreateDefault(w http.ResponseWriter, r *http.Request) {
+	generatedFiles, err := rest.videoService.CreateDefault(r.Context())
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
 
+	w.Header().Set("Access-Control-Allow-Origin", "*")
+	w.Header().Set("Content-Type", "application/json")
+
+	response := map[string]interface{}{
+		"success": true,
+		"message": "Pregeneration completed successfully",
+		"files":   generatedFiles,
+		"count":   len(generatedFiles),
+	}
+
+	w.WriteHeader(http.StatusCreated)
+	if err := json.NewEncoder(w).Encode(response); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
 }
 
 func (rest *Rest) GetVideoInfo(w http.ResponseWriter, r *http.Request) {
