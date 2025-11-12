@@ -59,18 +59,44 @@ func (s *VideoService) GetInfo(name string) (*config.FFProbeOutput, error) {
 	return &info, nil
 }
 
-// func (s *VideoService) CreateDefault() error {
-// 	inputPath := config.AppPaths.DefaultSourceVideo
-// 	filenameNoExt := strings.TrimSuffix(filepath.Base(inputPath), filepath.Ext(inputPath))
-// 	outputPath := filepath.Join(config.AppPaths.Video, filenameNoExt)
-// 	if err := os.MkdirAll(outputPath, 0755); err != nil {
-// 		return err
-// 	}
-//
-// 	for _, spec := range config.DefaultPregenSpecs {
-//
-// 	}
-// }
+func (s *VideoService) CreateDefault(ctx context.Context) ([]string, error) {
+	inputPath := config.AppPaths.DefaultSourceVideo
+	filenameNoExt := strings.TrimSuffix(filepath.Base(inputPath), filepath.Ext(inputPath))
+	outputDir := filepath.Join(config.AppPaths.Video, filenameNoExt)
+
+	if err := os.MkdirAll(outputDir, 0755); err != nil {
+		return nil, fmt.Errorf("failed to create output directory: %w", err)
+	}
+
+	var generatedFiles []string
+
+	log.Printf("Starting pregeneration of %d video variants...", len(config.DefaultPregenSpecs))
+
+	for i, spec := range config.DefaultPregenSpecs {
+		log.Printf("Generating video %d/%d: %s %dx%d %s",
+			i+1, len(config.DefaultPregenSpecs), spec.Codec, spec.Width, spec.Height, spec.Container)
+
+		resultCh, errCh := s.Transcode(ctx, spec, inputPath, outputDir)
+
+		// Wait for completion
+		select {
+		case result := <-resultCh:
+			filename := filepath.Base(result)
+			generatedFiles = append(generatedFiles, filename)
+			log.Printf("✅ Generated: %s", filename)
+
+		case err := <-errCh:
+			return nil, fmt.Errorf("failed to generate video %d (%s %dx%d): %w",
+				i+1, spec.Codec, spec.Width, spec.Height, err)
+
+		case <-ctx.Done():
+			return nil, fmt.Errorf("pregeneration cancelled: %w", ctx.Err())
+		}
+	}
+
+	log.Printf("🎉 Pregeneration complete! Generated %d videos", len(generatedFiles))
+	return generatedFiles, nil
+}
 
 // TranscodeFromParams parses parameters and calls Transcode with appropriate paths
 func (s *VideoService) TranscodeFromParams(ctx context.Context, paramsStr string) (<-chan string, <-chan error) {
@@ -156,7 +182,7 @@ func (s *VideoService) Transcode(ctx context.Context, spec config.VideoSpec, inp
 
 		cmd := exec.CommandContext(ctx, "ffmpeg", args...)
 
-		log.Printf("Starting transcode with command: ffmpeg %s", strings.Join(args, " "))
+		// log.Printf("Starting transcode with command: ffmpeg %s", strings.Join(args, " "))
 
 		var stderr bytes.Buffer
 		cmd.Stderr = &stderr
@@ -168,8 +194,8 @@ func (s *VideoService) Transcode(ctx context.Context, spec config.VideoSpec, inp
 			return
 		}
 
-		log.Printf("Transcode completed successfully. Output file: %s", outputPath)
-		log.Printf("FFmpeg stderr output: %s", stderr.String())
+		// log.Printf("Transcode completed successfully. Output file: %s", outputPath)
+		// log.Printf("FFmpeg stderr output: %s", stderr.String())
 
 		resultCh <- outputPath
 	}()
