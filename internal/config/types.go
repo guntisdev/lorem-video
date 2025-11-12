@@ -2,6 +2,8 @@ package config
 
 import (
 	"fmt"
+	"maps"
+	"slices"
 	"strconv"
 	"strings"
 )
@@ -31,8 +33,23 @@ var DefaultVideoSpec = VideoSpec{
 	Container:    "mp4",
 }
 
-var ValidVideoCodecs = []string{"h264", "h265", "av1", "vp9", "novideo"}   // novideo - shoul be mapped to "none" for ffmpeg
-var ValidAudioCodecs = []string{"aac", "opus", "mp3", "vorbis", "noaudio"} // noaudio - shoul be mapped to "none" for ffmpeg
+var VideoCodecNameMap = map[string]string{
+	"av1":     "libaom-av1",
+	"h264":    "libx264",
+	"h265":    "libx265",
+	"vp9":     "libvpx-vp9",
+	"novideo": "none",
+}
+
+var AudioCodecNameMap = map[string]string{
+	"aac":     "aac",
+	"opus":    "libopus",
+	"vorbis":  "vorbis",
+	"noaudio": "none",
+}
+
+var ValidVideoCodecs = slices.Collect(maps.Keys(VideoCodecNameMap))
+var ValidAudioCodecs = slices.Collect(maps.Keys(AudioCodecNameMap))
 var ValidContainers = []string{"mp4", "webm"}
 
 type Resolution struct {
@@ -54,6 +71,28 @@ const (
 	MinDimension = 64
 	MaxDimension = 3840 // 4K
 )
+
+var VideoCodecArgs = map[string][]string{
+	"libaom-av1": {
+		"-cpu-used", "8",
+		"-row-mt", "1",
+		"-tiles", "2x2",
+	},
+	"libx264": {
+		"-preset", "fast",
+		"-threads", "0",
+	},
+	"libx265": {
+		"-preset", "fast",
+		"-x265-params", "pools=+",
+	},
+	"libvpx-vp9": {
+		"-speed", "4",
+		"-tile-columns", "2",
+		"-tile-rows", "1",
+		"-threads", "8",
+	},
+}
 
 func ApplyDefaultVideoSpec(input *VideoSpec) VideoSpec {
 	result := DefaultVideoSpec
