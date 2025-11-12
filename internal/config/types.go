@@ -14,23 +14,40 @@ type VideoSpec struct {
 	Duration     int // seconds
 	Codec        string
 	FPS          int
-	Bitrate      string // "23crf", "3000cbr", or "3000vbr"
+	Bitrate      string // "25crf", "3000cbr", or "3000vbr"
 	AudioCodec   string
 	AudioBitrate int    // kbps
 	Container    string // file extension/container format
 }
 
-// TODO check about 23crf for AV1 - I guess it has different defaults
 var DefaultVideoSpec = VideoSpec{
 	Width:        1280,
 	Height:       720,
 	Duration:     20,
 	Codec:        "h264",
 	FPS:          30,
-	Bitrate:      "23crf",
+	Bitrate:      "25crf",
 	AudioCodec:   "aac",
 	AudioBitrate: 128,
 	Container:    "mp4",
+}
+
+// DefaultPregenSpecs defines popular video combinations for pregeneration
+var DefaultPregenSpecs = []VideoSpec{
+	// H.264/AAC/MP4 - Most popular web streaming
+	{Width: 854, Height: 480, FPS: 30, Duration: 20, Codec: "h264", Bitrate: "25crf", AudioCodec: "aac", AudioBitrate: 96, Container: "mp4"},    // 480p
+	{Width: 1280, Height: 720, FPS: 30, Duration: 20, Codec: "h264", Bitrate: "25crf", AudioCodec: "aac", AudioBitrate: 128, Container: "mp4"},  // 720p
+	{Width: 1920, Height: 1080, FPS: 30, Duration: 20, Codec: "h264", Bitrate: "25crf", AudioCodec: "aac", AudioBitrate: 128, Container: "mp4"}, // 1080p
+
+	// AV1/Opus/WebM - Next-gen efficient streaming (same CRF = higher quality due to efficiency)
+	{Width: 854, Height: 480, FPS: 30, Duration: 20, Codec: "av1", Bitrate: "25crf", AudioCodec: "opus", AudioBitrate: 96, Container: "webm"},    // 480p
+	{Width: 1280, Height: 720, FPS: 30, Duration: 20, Codec: "av1", Bitrate: "25crf", AudioCodec: "opus", AudioBitrate: 128, Container: "webm"},  // 720p
+	{Width: 1920, Height: 1080, FPS: 30, Duration: 20, Codec: "av1", Bitrate: "25crf", AudioCodec: "opus", AudioBitrate: 128, Container: "webm"}, // 1080p
+
+	// VP9/Opus/WebM - Widely supported alternative (same CRF = better quality than H.264)
+	{Width: 854, Height: 480, FPS: 30, Duration: 20, Codec: "vp9", Bitrate: "25crf", AudioCodec: "opus", AudioBitrate: 96, Container: "webm"},    // 480p
+	{Width: 1280, Height: 720, FPS: 30, Duration: 20, Codec: "vp9", Bitrate: "25crf", AudioCodec: "opus", AudioBitrate: 128, Container: "webm"},  // 720p
+	{Width: 1920, Height: 1080, FPS: 30, Duration: 20, Codec: "vp9", Bitrate: "25crf", AudioCodec: "opus", AudioBitrate: 128, Container: "webm"}, // 1080p
 }
 
 var VideoCodecNameMap = map[string]string{
@@ -154,4 +171,17 @@ func ParseResolution(s string) (Resolution, error) {
 	}
 
 	return Resolution{Width: width, Height: height}, nil
+}
+
+// GetPregenFilenames returns a slice of filenames that should be pregenerated
+func GetPregenFilenames() []string {
+	filenames := make([]string, len(DefaultPregenSpecs))
+	for i, spec := range DefaultPregenSpecs {
+		// Use parser.GenerateFilename if available, or build manually
+		// For now, build manually to avoid circular imports
+		filenames[i] = fmt.Sprintf("%s_%dx%d_%dfps_%ds_%s_%s_%dkbps.%s",
+			spec.Codec, spec.Width, spec.Height, spec.FPS, spec.Duration,
+			spec.Bitrate, spec.AudioCodec, spec.AudioBitrate, spec.Container)
+	}
+	return filenames
 }

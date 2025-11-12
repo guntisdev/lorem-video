@@ -19,6 +19,7 @@ func main() {
 	http.HandleFunc("GET /video/serve/{resolution}", r.ServeVideo)
 	http.HandleFunc("GET /video/getInfo/{name}", r.GetVideoInfo)
 	http.HandleFunc("GET /video/transcode/{params}", r.Transcode)
+	http.HandleFunc("GET /video/create-default", r.CreateDefault)
 
 	port := os.Getenv("PORT")
 	if port == "" {

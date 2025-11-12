@@ -129,8 +129,15 @@ func TestVideoTranscodeIntegration(t *testing.T) {
 			ctx, cancel := context.WithTimeout(context.Background(), tc.timeout)
 			defer cancel()
 
+			// Parse params to get VideoSpec for the new Transcode method
+			inputParams, err := parser.ParseFilename(tc.params)
+			if err != nil {
+				t.Fatalf("Failed to parse params: %v", err)
+			}
+			spec := config.ApplyDefaultVideoSpec(inputParams)
+
 			outputPath := tempDir
-			resultCh, errCh := service.Transcode(ctx, tc.params, inputPath, outputPath)
+			resultCh, errCh := service.Transcode(ctx, spec, inputPath, outputPath)
 
 			// Wait for completion
 			select {
