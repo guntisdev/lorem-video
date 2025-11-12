@@ -115,21 +115,7 @@ func (s *VideoService) Transcode(ctx context.Context, paramsStr, inputPath, outp
 				spec.Width, spec.Height, spec.Width, spec.Height),
 		}
 
-		// TODO move mapping to array/struct in types.go
-		// Map video codec names to FFmpeg codec names
-		videoCodec := spec.Codec
-		switch spec.Codec {
-		case "av1":
-			videoCodec = "libaom-av1"
-		case "h264":
-			videoCodec = "libx264"
-		case "h265":
-			videoCodec = "libx265"
-		case "vp9":
-			videoCodec = "libvpx-vp9"
-		case "novideo":
-			videoCodec = "none"
-		}
+		videoCodec := config.VideoCodecNameMap[spec.Codec]
 
 		if videoCodec != "none" {
 			args = append(args,
@@ -137,35 +123,8 @@ func (s *VideoService) Transcode(ctx context.Context, paramsStr, inputPath, outp
 				"-r", fmt.Sprintf("%d", spec.FPS),
 			)
 
-			// Add codec-specific optimizations
-			switch videoCodec {
-			case "libaom-av1":
-				// Speed up AV1 encoding significantly
-				args = append(args,
-					"-cpu-used", "8", // Fastest preset (0-8, 8 is fastest)
-					"-row-mt", "1", // Enable row-based multithreading
-					"-tiles", "2x2", // Enable tile-based encoding for better parallelism
-				)
-			case "libx264":
-				// H.264 optimizations
-				args = append(args,
-					"-preset", "fast", // Balance speed vs compression
-					"-threads", "0", // Use all available CPU threads
-				)
-			case "libx265":
-				// H.265/HEVC optimizations
-				args = append(args,
-					"-preset", "fast", // Balance speed vs compression
-					"-x265-params", "pools=+", // Enable all thread pools
-				)
-			case "libvpx-vp9":
-				// VP9 optimizations
-				args = append(args,
-					"-speed", "4", // Speed preset (0-8, higher = faster)
-					"-tile-columns", "2", // Enable tile-based encoding
-					"-tile-rows", "1", // Enable tile-based encoding
-					"-threads", "8", // Use multiple threads
-				)
+			if codecArgs, ok := config.VideoCodecArgs[videoCodec]; ok {
+				args = append(args, codecArgs...)
 			}
 		} else {
 			args = append(args, "-vn") // no video
@@ -183,18 +142,7 @@ func (s *VideoService) Transcode(ctx context.Context, paramsStr, inputPath, outp
 			args = append(args, "-b:v", bitrate+"k")
 		}
 
-		// Audio
-		audioCodec := spec.AudioCodec
-		// TODO move mapping to array/struct in types.go
-		// Map audio codec names to FFmpeg codec names
-		switch spec.AudioCodec {
-		case "opus":
-			audioCodec = "libopus"
-		case "noaudio":
-			audioCodec = "none"
-			// aac, mp3, vorbis use their default names
-		}
-
+		audioCodec := config.AudioCodecNameMap[spec.AudioCodec]
 		if audioCodec != "none" {
 			args = append(args,
 				"-c:a", audioCodec, // audio codec
