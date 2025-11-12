@@ -18,6 +18,7 @@ type VideoSpec struct {
 	Container    string // file extension/container format
 }
 
+// TODO check about 23crf for AV1 - I guess it has different defaults
 var DefaultVideoSpec = VideoSpec{
 	Width:        1280,
 	Height:       720,

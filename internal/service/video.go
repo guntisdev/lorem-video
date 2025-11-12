@@ -22,7 +22,7 @@ func NewVideoService() *VideoService {
 }
 
 func (s *VideoService) GetPath(resolution config.Resolution) (string, error) {
-	videoPath := filepath.Join(config.DataDir, fmt.Sprintf("%dx%d.mp4", resolution.Width, resolution.Height))
+	videoPath := filepath.Join(config.AppPaths.Data, fmt.Sprintf("%dx%d.mp4", resolution.Width, resolution.Height))
 
 	if _, err := os.Stat(videoPath); os.IsNotExist(err) {
 		return "", fmt.Errorf("video not found: %dx%d", resolution.Width, resolution.Height)
@@ -32,8 +32,7 @@ func (s *VideoService) GetPath(resolution config.Resolution) (string, error) {
 }
 
 func (s *VideoService) GetInfo(name string) (*config.FFProbeOutput, error) {
-	// videoPath := filepath.Join(config.DataDir, "sourceVideo", name)
-	videoPath := filepath.Join(config.DataDir, "video", name)
+	videoPath := filepath.Join(config.AppPaths.Video, name)
 
 	if _, err := os.Stat(videoPath); os.IsNotExist(err) {
 		return nil, fmt.Errorf("video not found: %s", name)
@@ -116,6 +115,7 @@ func (s *VideoService) Transcode(ctx context.Context, paramsStr, inputPath, outp
 				spec.Width, spec.Height, spec.Width, spec.Height),
 		}
 
+		// TODO move mapping to array/struct in types.go
 		// Map video codec names to FFmpeg codec names
 		videoCodec := spec.Codec
 		switch spec.Codec {
@@ -185,6 +185,7 @@ func (s *VideoService) Transcode(ctx context.Context, paramsStr, inputPath, outp
 
 		// Audio
 		audioCodec := spec.AudioCodec
+		// TODO move mapping to array/struct in types.go
 		// Map audio codec names to FFmpeg codec names
 		switch spec.AudioCodec {
 		case "opus":
