@@ -12,6 +12,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"strings"
+	"time"
 )
 
 type VideoService struct {
@@ -19,6 +20,24 @@ type VideoService struct {
 
 func NewVideoService() *VideoService {
 	return &VideoService{}
+}
+
+// StartupPregeneration runs video pregeneration in the background on app startup
+func (s *VideoService) StartupPregeneration() {
+	go func() {
+		// log.Println("Starting pregeneration of default videos...")
+
+		// Set a reasonable timeout for pregeneration (15 minutes)
+		ctx, cancel := context.WithTimeout(context.Background(), 15*time.Minute)
+		defer cancel()
+
+		_, err := s.PregenerateVideos(ctx)
+		if err != nil {
+			log.Printf("❌ Failed to pregenerate videos: %v", err)
+			return
+		}
+		// log.Printf("✅ Pregeneration complete! Generated %d videos: %v", len(generatedFiles), generatedFiles)
+	}()
 }
 
 func (s *VideoService) GetPath(resolution config.Resolution) (string, error) {
@@ -59,7 +78,8 @@ func (s *VideoService) GetInfo(name string) (*config.FFProbeOutput, error) {
 	return &info, nil
 }
 
-func (s *VideoService) CreateDefault(ctx context.Context) ([]string, error) {
+// PregenerateVideos generates all pregenerated videos from DefaultPregenSpecs
+func (s *VideoService) PregenerateVideos(ctx context.Context) ([]string, error) {
 	inputPath := config.AppPaths.DefaultSourceVideo
 	filenameNoExt := strings.TrimSuffix(filepath.Base(inputPath), filepath.Ext(inputPath))
 	outputDir := filepath.Join(config.AppPaths.Video, filenameNoExt)
@@ -70,7 +90,7 @@ func (s *VideoService) CreateDefault(ctx context.Context) ([]string, error) {
 
 	var generatedFiles []string
 
-	log.Printf("Starting pregeneration of %d video variants...", len(config.DefaultPregenSpecs))
+	// log.Printf("Starting pregeneration of %d video variants...", len(config.DefaultPregenSpecs))
 
 	for i, spec := range config.DefaultPregenSpecs {
 		log.Printf("Generating video %d/%d: %s %dx%d %s",
@@ -94,7 +114,7 @@ func (s *VideoService) CreateDefault(ctx context.Context) ([]string, error) {
 		}
 	}
 
-	log.Printf("🎉 Pregeneration complete! Generated %d videos", len(generatedFiles))
+	// log.Printf("🎉 Pregeneration complete! Generated %d videos", len(generatedFiles))
 	return generatedFiles, nil
 }
 
@@ -127,7 +147,18 @@ func (s *VideoService) Transcode(ctx context.Context, spec config.VideoSpec, inp
 
 	// Generate proper filename from the VideoSpec
 	filename := parser.GenerateFilename(&spec)
-	outputPath = filepath.Join(outputPath, filename)
+	fullOutputPath := filepath.Join(outputPath, filename)
+
+	// Check if file already exists
+	if _, err := os.Stat(fullOutputPath); err == nil {
+		log.Printf("⏭️  File already exists, skipping: %s", filename)
+		go func() {
+			defer close(resultCh)
+			defer close(errCh)
+			resultCh <- fullOutputPath
+		}()
+		return resultCh, errCh
+	}
 
 	go func() {
 		defer close(resultCh)
@@ -178,7 +209,7 @@ func (s *VideoService) Transcode(ctx context.Context, spec config.VideoSpec, inp
 			args = append(args, "-an") // no audio
 		}
 
-		args = append(args, outputPath)
+		args = append(args, fullOutputPath)
 
 		cmd := exec.CommandContext(ctx, "ffmpeg", args...)
 
@@ -194,10 +225,10 @@ func (s *VideoService) Transcode(ctx context.Context, spec config.VideoSpec, inp
 			return
 		}
 
-		// log.Printf("Transcode completed successfully. Output file: %s", outputPath)
+		// log.Printf("Transcode completed successfully. Output file: %s", fullOutputPath)
 		// log.Printf("FFmpeg stderr output: %s", stderr.String())
 
-		resultCh <- outputPath
+		resultCh <- fullOutputPath
 	}()
 
 	return resultCh, errCh
