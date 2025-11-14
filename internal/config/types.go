@@ -51,7 +51,7 @@ var DefaultPregenSpecs = []VideoSpec{
 }
 
 var VideoCodecNameMap = map[string]string{
-	"av1":     "libaom-av1",
+	"av1":     "libaom-av1", // svt-av1 - faster encoding, limited bitrate options
 	"h264":    "libx264",
 	"h265":    "libx265",
 	"vp9":     "libvpx-vp9",

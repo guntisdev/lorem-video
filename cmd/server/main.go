@@ -7,6 +7,7 @@ import (
 
 	"kittens/internal/config"
 	"kittens/internal/rest"
+	"kittens/internal/service"
 )
 
 func main() {
@@ -14,12 +15,15 @@ func main() {
 		log.Fatalf("Failed to create directories %v", err)
 	}
 
+	// Start video pregeneration in background
+	videoService := service.NewVideoService()
+	videoService.StartupPregeneration()
+
 	r := rest.New()
 	http.HandleFunc("GET /", r.Index)
 	http.HandleFunc("GET /video/serve/{resolution}", r.ServeVideo)
 	http.HandleFunc("GET /video/getInfo/{name}", r.GetVideoInfo)
 	http.HandleFunc("GET /video/transcode/{params}", r.Transcode)
-	http.HandleFunc("GET /video/create-default", r.CreateDefault)
 
 	port := os.Getenv("PORT")
 	if port == "" {
