@@ -1,1 +1,71 @@
-this is index.html
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kittens Video App</title>
+    
+    <!-- CSS -->
+    <link rel="stylesheet" href="/web/styles.css">
+    
+    <!-- Favicon -->
+    <link rel="icon" href="/web/favicon.svg" type="image/svg+xml">
+</head>
+<body>
+    <div class="container">
+        <h1>🎬 Kittens Video App</h1>
+        
+        <div class="info">
+            <p>Welcome to the video transcoding app! This is a test page to verify CSS and favicon are loading correctly.</p>
+        </div>
+        
+        <div class="video-container">
+            <input type="text" placeholder="Enter video parameters (e.g., 720p_h264_30fps)" id="videoParams">
+            <button onclick="testTranscode()">Test Transcode</button>
+            <button onclick="testVideoInfo()">Test Video Info</button>
+        </div>
+        
+        <div id="output" class="info" style="display:none;">
+            <h3>Output:</h3>
+            <pre id="result"></pre>
+        </div>
+    </div>
+
+    <script>
+        function testTranscode() {
+            const params = document.getElementById('videoParams').value || '720p_h264_30fps';
+            const output = document.getElementById('output');
+            const result = document.getElementById('result');
+            
+            output.style.display = 'block';
+            result.textContent = 'Testing transcode with: ' + params;
+            
+            fetch(`/video/transcode/${params}`)
+                .then(response => response.json())
+                .then(data => {
+                    result.textContent = JSON.stringify(data, null, 2);
+                })
+                .catch(error => {
+                    result.textContent = 'Error: ' + error.message;
+                });
+        }
+        
+        function testVideoInfo() {
+            const output = document.getElementById('output');
+            const result = document.getElementById('result');
+            
+            output.style.display = 'block';
+            result.textContent = 'Testing video info...';
+            
+            fetch('/video/getInfo/test.mp4')
+                .then(response => response.json())
+                .then(data => {
+                    result.textContent = JSON.stringify(data, null, 2);
+                })
+                .catch(error => {
+                    result.textContent = 'Error: ' + error.message;
+                });
+        }
+    </script>
+</body>
+</html>

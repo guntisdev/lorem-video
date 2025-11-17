@@ -20,7 +20,16 @@ func main() {
 	videoService.StartupPregeneration()
 
 	r := rest.New()
-	http.HandleFunc("GET /", r.Index)
+
+	http.HandleFunc("GET /", func(w http.ResponseWriter, r *http.Request) {
+		http.ServeFile(w, r, "web/dist/index.html")
+	})
+
+	http.HandleFunc("GET /web/{path...}", func(w http.ResponseWriter, r *http.Request) {
+		fs := http.StripPrefix("/web/", http.FileServer(http.Dir("web/dist/")))
+		fs.ServeHTTP(w, r)
+	})
+
 	http.HandleFunc("GET /video/serve/{resolution}", r.ServeVideo)
 	http.HandleFunc("GET /video/getInfo/{name}", r.GetVideoInfo)
 	http.HandleFunc("GET /video/transcode/{params}", r.Transcode)
