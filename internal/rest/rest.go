@@ -17,10 +17,6 @@ func New() *Rest {
 	}
 }
 
-func (rest *Rest) Index(w http.ResponseWriter, r *http.Request) {
-	http.ServeFile(w, r, "web/dist/index.html")
-}
-
 func (rest *Rest) ServeVideo(w http.ResponseWriter, r *http.Request) {
 	resolutionStr := r.PathValue("resolution")
 	resolution, err := config.ParseResolution(resolutionStr)
