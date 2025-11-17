@@ -36,7 +36,6 @@ func (s *VideoService) StartupPregeneration() {
 			log.Printf("❌ Failed to pregenerate videos: %v", err)
 			return
 		}
-		// log.Printf("✅ Pregeneration complete! Generated %d videos: %v", len(generatedFiles), generatedFiles)
 	}()
 }
 
@@ -90,12 +89,7 @@ func (s *VideoService) PregenerateVideos(ctx context.Context) ([]string, error) 
 
 	var generatedFiles []string
 
-	// log.Printf("Starting pregeneration of %d video variants...", len(config.DefaultPregenSpecs))
-
 	for i, spec := range config.DefaultPregenSpecs {
-		log.Printf("Generating video %d/%d: %s %dx%d %s",
-			i+1, len(config.DefaultPregenSpecs), spec.Codec, spec.Width, spec.Height, spec.Container)
-
 		resultCh, errCh := s.Transcode(ctx, spec, inputPath, outputDir)
 
 		// Wait for completion
@@ -103,7 +97,6 @@ func (s *VideoService) PregenerateVideos(ctx context.Context) ([]string, error) 
 		case result := <-resultCh:
 			filename := filepath.Base(result)
 			generatedFiles = append(generatedFiles, filename)
-			log.Printf("✅ Generated: %s", filename)
 
 		case err := <-errCh:
 			return nil, fmt.Errorf("failed to generate video %d (%s %dx%d): %w",
@@ -114,7 +107,6 @@ func (s *VideoService) PregenerateVideos(ctx context.Context) ([]string, error) 
 		}
 	}
 
-	// log.Printf("🎉 Pregeneration complete! Generated %d videos", len(generatedFiles))
 	return generatedFiles, nil
 }
 
@@ -151,7 +143,6 @@ func (s *VideoService) Transcode(ctx context.Context, spec config.VideoSpec, inp
 
 	// Check if file already exists
 	if _, err := os.Stat(fullOutputPath); err == nil {
-		log.Printf("⏭️  File already exists, skipping: %s", filename)
 		go func() {
 			defer close(resultCh)
 			defer close(errCh)
@@ -213,8 +204,6 @@ func (s *VideoService) Transcode(ctx context.Context, spec config.VideoSpec, inp
 
 		cmd := exec.CommandContext(ctx, "ffmpeg", args...)
 
-		// log.Printf("Starting transcode with command: ffmpeg %s", strings.Join(args, " "))
-
 		var stderr bytes.Buffer
 		cmd.Stderr = &stderr
 
@@ -225,8 +214,7 @@ func (s *VideoService) Transcode(ctx context.Context, spec config.VideoSpec, inp
 			return
 		}
 
-		// log.Printf("Transcode completed successfully. Output file: %s", fullOutputPath)
-		// log.Printf("FFmpeg stderr output: %s", stderr.String())
+		log.Printf("Transcode success: %s", filepath.Base(fullOutputPath))
 
 		resultCh <- fullOutputPath
 	}()
