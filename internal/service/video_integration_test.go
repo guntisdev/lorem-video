@@ -7,13 +7,14 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"kittens/internal/config"
-	"kittens/internal/parser"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"testing"
 	"time"
+
+	"lorem.video/internal/config"
+	"lorem.video/internal/parser"
 )
 
 // Integration tests for video transcoding - these are slow and require FFmpeg

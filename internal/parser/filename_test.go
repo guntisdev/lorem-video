@@ -1,8 +1,9 @@
 package parser
 
 import (
-	"kittens/internal/config"
 	"testing"
+
+	"lorem.video/internal/config"
 )
 
 func TestParseFilename(t *testing.T) {

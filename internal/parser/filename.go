@@ -2,12 +2,13 @@ package parser
 
 import (
 	"fmt"
-	"kittens/internal/config"
 	"path/filepath"
 	"regexp"
 	"slices"
 	"strconv"
 	"strings"
+
+	"lorem.video/internal/config"
 )
 
 var resolutionRegex = regexp.MustCompile(`^(\d+)x(\d+)$`) // 1280x720

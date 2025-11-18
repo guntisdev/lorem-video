@@ -2,9 +2,10 @@ package rest
 
 import (
 	"encoding/json"
-	"kittens/internal/config"
-	"kittens/internal/service"
 	"net/http"
+
+	"lorem.video/internal/config"
+	"lorem.video/internal/service"
 )
 
 type Rest struct {

@@ -5,14 +5,15 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"kittens/internal/config"
-	"kittens/internal/parser"
 	"log"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"strings"
 	"time"
+
+	"lorem.video/internal/config"
+	"lorem.video/internal/parser"
 )
 
 type VideoService struct {
