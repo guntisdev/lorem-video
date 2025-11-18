@@ -5,9 +5,9 @@ import (
 	"net/http"
 	"os"
 
-	"kittens/internal/config"
-	"kittens/internal/rest"
-	"kittens/internal/service"
+	"lorem.video/internal/config"
+	"lorem.video/internal/rest"
+	"lorem.video/internal/service"
 )
 
 func main() {

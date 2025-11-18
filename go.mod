@@ -1,4 +1,4 @@
-module kittens
+module lorem.video
 
 go 1.24.0
 
