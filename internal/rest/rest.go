@@ -3,8 +3,9 @@ package rest
 import (
 	"encoding/json"
 	"net/http"
+	"path/filepath"
+	"strings"
 
-	"lorem.video/internal/config"
 	"lorem.video/internal/service"
 )
 
@@ -19,26 +20,27 @@ func New() *Rest {
 }
 
 func (rest *Rest) ServeVideo(w http.ResponseWriter, r *http.Request) {
-	resolutionStr := r.PathValue("resolution")
-	resolution, err := config.ParseResolution(resolutionStr)
-
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
-		return
-	}
-
-	videoPath, err := rest.videoService.GetPath(resolution)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusNotFound)
-		return
-	}
+	params := r.PathValue("params")
 
 	w.Header().Set("Access-Control-Allow-Origin", "*")
 	w.Header().Set("Access-Control-Allow-Methods", "GET, OPTIONS")
-	w.Header().Set("Content-Type", "video/mp4")
 	w.Header().Set("Accept-Ranges", "bytes")
 
-	http.ServeFile(w, r, videoPath)
+	resultCh, errCh := rest.videoService.GetOrGenerate(r.Context(), params)
+
+	select {
+	case videoPath := <-resultCh:
+		ext := strings.TrimPrefix(filepath.Ext(videoPath), ".")
+		w.Header().Set("Content-Type", "video/"+ext)
+
+		http.ServeFile(w, r, videoPath)
+
+	case err := <-errCh:
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+
+	case <-r.Context().Done():
+		http.Error(w, "request cancelled", http.StatusRequestTimeout)
+	}
 }
 
 func (rest *Rest) GetVideoInfo(w http.ResponseWriter, r *http.Request) {

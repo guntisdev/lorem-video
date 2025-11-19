@@ -26,9 +26,6 @@ func NewVideoService() *VideoService {
 // StartupPregeneration runs video pregeneration in the background on app startup
 func (s *VideoService) StartupPregeneration() {
 	go func() {
-		// log.Println("Starting pregeneration of default videos...")
-
-		// Set a reasonable timeout for pregeneration (15 minutes)
 		ctx, cancel := context.WithTimeout(context.Background(), 15*time.Minute)
 		defer cancel()
 
@@ -38,44 +35,6 @@ func (s *VideoService) StartupPregeneration() {
 			return
 		}
 	}()
-}
-
-func (s *VideoService) GetPath(resolution config.Resolution) (string, error) {
-	videoPath := filepath.Join(config.AppPaths.Data, fmt.Sprintf("%dx%d.mp4", resolution.Width, resolution.Height))
-
-	if _, err := os.Stat(videoPath); os.IsNotExist(err) {
-		return "", fmt.Errorf("video not found: %dx%d", resolution.Width, resolution.Height)
-	}
-
-	return videoPath, nil
-}
-
-func (s *VideoService) GetInfo(name string) (*config.FFProbeOutput, error) {
-	videoPath := filepath.Join(config.AppPaths.Video, name)
-
-	if _, err := os.Stat(videoPath); os.IsNotExist(err) {
-		return nil, fmt.Errorf("video not found: %s", name)
-	}
-
-	cmd := exec.Command("ffprobe",
-		"-v", "quiet",
-		"-print_format", "json",
-		"-show_format",
-		"-show_streams",
-		videoPath,
-	)
-
-	output, err := cmd.Output()
-	if err != nil {
-		return nil, fmt.Errorf("ffprobe failed: %w", err)
-	}
-
-	var info config.FFProbeOutput
-	if err := json.Unmarshal(output, &info); err != nil {
-		return nil, fmt.Errorf("failed to parse ffprobe output: %w", err)
-	}
-
-	return &info, nil
 }
 
 // PregenerateVideos generates all pregenerated videos from DefaultPregenSpecs
@@ -111,6 +70,60 @@ func (s *VideoService) PregenerateVideos(ctx context.Context) ([]string, error) 
 	return generatedFiles, nil
 }
 
+func (s *VideoService) findExistingVideo(filename string) string {
+	// Search in pregenerated videos (data/video/bunny folder)
+	inputPath := config.AppPaths.DefaultSourceVideo
+	filenameNoExt := strings.TrimSuffix(filepath.Base(inputPath), filepath.Ext(inputPath))
+	pregeneratedDir := filepath.Join(config.AppPaths.Video, filenameNoExt)
+	pregeneratedPath := filepath.Join(pregeneratedDir, filename)
+
+	if _, err := os.Stat(pregeneratedPath); err == nil {
+		return pregeneratedPath
+	}
+
+	// Search in tmp folder
+	tmpPath := filepath.Join(config.AppPaths.Tmp, filename)
+	if _, err := os.Stat(tmpPath); err == nil {
+		return tmpPath
+	}
+
+	return ""
+}
+
+func (s *VideoService) GetOrGenerate(ctx context.Context, paramsStr string) (<-chan string, <-chan error) {
+	resultCh := make(chan string, 1)
+	errCh := make(chan error, 1)
+
+	inputParams, err := parser.ParseFilename(paramsStr)
+	if err != nil {
+		go func() {
+			defer close(errCh)
+			defer close(resultCh)
+			errCh <- fmt.Errorf("failed to parse filename parameters: %w", err)
+		}()
+		return resultCh, errCh
+	}
+
+	spec := config.ApplyDefaultVideoSpec(inputParams)
+	filename := parser.GenerateFilename(&spec)
+
+	// Search for existing video
+	existingPath := s.findExistingVideo(filename)
+	if existingPath != "" {
+		go func() {
+			defer close(resultCh)
+			defer close(errCh)
+			resultCh <- existingPath
+		}()
+		return resultCh, errCh
+	}
+
+	inputPath := config.AppPaths.DefaultSourceVideo
+	outputPath := config.AppPaths.Tmp
+
+	return s.Transcode(ctx, spec, inputPath, outputPath)
+}
+
 // TranscodeFromParams parses parameters and calls Transcode with appropriate paths
 func (s *VideoService) TranscodeFromParams(ctx context.Context, paramsStr string) (<-chan string, <-chan error) {
 	// Parse the parameters
@@ -122,14 +135,11 @@ func (s *VideoService) TranscodeFromParams(ctx context.Context, paramsStr string
 		return nil, errCh
 	}
 
-	// Apply defaults to create complete VideoSpec
 	spec := config.ApplyDefaultVideoSpec(inputParams)
 
-	// Set up paths
 	inputPath := config.AppPaths.DefaultSourceVideo
 	outputPath := config.AppPaths.Video
 
-	// Call the main Transcode function
 	return s.Transcode(ctx, spec, inputPath, outputPath)
 }
 
@@ -222,4 +232,32 @@ func (s *VideoService) Transcode(ctx context.Context, spec config.VideoSpec, inp
 
 	return resultCh, errCh
 
+}
+
+func (s *VideoService) GetInfo(name string) (*config.FFProbeOutput, error) {
+	videoPath := filepath.Join(config.AppPaths.Video, name)
+
+	if _, err := os.Stat(videoPath); os.IsNotExist(err) {
+		return nil, fmt.Errorf("video not found: %s", name)
+	}
+
+	cmd := exec.Command("ffprobe",
+		"-v", "quiet",
+		"-print_format", "json",
+		"-show_format",
+		"-show_streams",
+		videoPath,
+	)
+
+	output, err := cmd.Output()
+	if err != nil {
+		return nil, fmt.Errorf("ffprobe failed: %w", err)
+	}
+
+	var info config.FFProbeOutput
+	if err := json.Unmarshal(output, &info); err != nil {
+		return nil, fmt.Errorf("failed to parse ffprobe output: %w", err)
+	}
+
+	return &info, nil
 }

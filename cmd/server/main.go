@@ -30,9 +30,9 @@ func main() {
 		fs.ServeHTTP(w, r)
 	})
 
-	http.HandleFunc("GET /video/serve/{resolution}", r.ServeVideo)
-	http.HandleFunc("GET /video/getInfo/{name}", r.GetVideoInfo)
-	http.HandleFunc("GET /video/transcode/{params}", r.Transcode)
+	http.HandleFunc("GET /getInfo/{name}", r.GetVideoInfo)
+	http.HandleFunc("GET /transcode/{params}", r.Transcode)
+	http.HandleFunc("GET /{params}", r.ServeVideo)
 
 	port := os.Getenv("PORT")
 	if port == "" {

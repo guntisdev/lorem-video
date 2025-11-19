@@ -10,6 +10,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strings"
 	"testing"
 	"time"
 
@@ -19,6 +20,139 @@ import (
 
 // Integration tests for video transcoding - these are slow and require FFmpeg
 // Run with: go test -tags=integration ./internal/service
+
+func TestGetOrGenerateIntegration(t *testing.T) {
+	// Skip if FFmpeg is not available
+	if _, err := exec.LookPath("ffmpeg"); err != nil {
+		t.Skip("FFmpeg not found, skipping integration test")
+	}
+
+	// Create temporary test directory structure
+	tempDir := t.TempDir()
+
+	// Set up temporary config paths for testing
+	oldAppPaths := config.AppPaths
+	defer func() { config.AppPaths = oldAppPaths }()
+
+	config.AppPaths = &config.Paths{
+		Data:               tempDir,
+		Video:              filepath.Join(tempDir, "video"),
+		SourceVideo:        filepath.Join(tempDir, "sourceVideo"),
+		Logs:               filepath.Join(tempDir, "logs"),
+		Tmp:                filepath.Join(tempDir, "tmp"),
+		DefaultSourceVideo: filepath.Join(tempDir, "sourceVideo", "bunny.mp4"),
+	}
+
+	// Create directories
+	if err := config.EnsureDirectories(); err != nil {
+		t.Fatalf("Failed to create directories: %v", err)
+	}
+
+	// Create a simple test video as source
+	createTestVideo(t, config.AppPaths.DefaultSourceVideo, 2, 640, 360)
+
+	// Create bunny subdirectory for pregenerated videos
+	bunnyDir := filepath.Join(config.AppPaths.Video, "bunny")
+	if err := os.MkdirAll(bunnyDir, 0755); err != nil {
+		t.Fatalf("Failed to create bunny directory: %v", err)
+	}
+
+	service := NewVideoService()
+
+	t.Run("Generate new video when not found", func(t *testing.T) {
+		ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+		defer cancel()
+
+		params := "h264_720p_30fps_2s_25crf_aac_96kbps.mp4"
+		resultCh, errCh := service.GetOrGenerate(ctx, params)
+
+		select {
+		case result := <-resultCh:
+			// Should be in tmp directory since it's newly generated
+			expectedPrefix := config.AppPaths.Tmp
+			if !strings.HasPrefix(result, expectedPrefix) {
+				t.Errorf("Expected result to be in tmp dir (%s), got: %s", expectedPrefix, result)
+			}
+
+			// Verify file exists and has content
+			info, err := os.Stat(result)
+			if err != nil {
+				t.Fatalf("Output file not found: %v", err)
+			}
+			if info.Size() == 0 {
+				t.Fatal("Output file is empty")
+			}
+
+			t.Logf("✅ New video generated: %s (size: %d bytes)", result, info.Size())
+
+		case err := <-errCh:
+			t.Fatalf("GetOrGenerate failed: %v", err)
+
+		case <-ctx.Done():
+			t.Fatal("GetOrGenerate timed out")
+		}
+	})
+
+	t.Run("Find existing video in pregenerated folder", func(t *testing.T) {
+		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer cancel()
+
+		// First, create a pregenerated video
+		params := "h264_480p_30fps_2s_23crf_aac_128kbps.mp4"
+		filename := "h264_854x480_30fps_2s_23crf_aac_128kbps.mp4"
+		pregeneratedPath := filepath.Join(bunnyDir, filename)
+
+		// Create the pregenerated video
+		createTestVideo(t, pregeneratedPath, 2, 854, 480)
+
+		// Now test GetOrGenerate finds it
+		resultCh, errCh := service.GetOrGenerate(ctx, params)
+
+		select {
+		case result := <-resultCh:
+			if result != pregeneratedPath {
+				t.Errorf("Expected to find pregenerated video at %s, got: %s", pregeneratedPath, result)
+			}
+			t.Logf("✅ Found existing pregenerated video: %s", result)
+
+		case err := <-errCh:
+			t.Fatalf("GetOrGenerate failed: %v", err)
+
+		case <-ctx.Done():
+			t.Fatal("GetOrGenerate timed out")
+		}
+	})
+
+	t.Run("Find existing video in tmp folder", func(t *testing.T) {
+		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer cancel()
+
+		// First, create a video in tmp folder
+		params := "vp9_720p_30fps_2s_30crf_opus_128kbps.webm"
+		filename := "vp9_1280x720_30fps_2s_30crf_opus_128kbps.webm"
+		tmpPath := filepath.Join(config.AppPaths.Tmp, filename)
+
+		// Create the tmp video
+		createTestVideo(t, tmpPath, 2, 1280, 720)
+
+		// Now test GetOrGenerate finds it
+		resultCh, errCh := service.GetOrGenerate(ctx, params)
+
+		select {
+		case result := <-resultCh:
+			if result != tmpPath {
+				t.Errorf("Expected to find tmp video at %s, got: %s", tmpPath, result)
+			}
+			t.Logf("✅ Found existing tmp video: %s", result)
+
+		case err := <-errCh:
+			t.Fatalf("GetOrGenerate failed: %v", err)
+
+		case <-ctx.Done():
+			t.Fatal("GetOrGenerate timed out")
+		}
+	})
+}
 
 func TestVideoTranscodeIntegration(t *testing.T) {
 	// Skip if FFmpeg is not available
@@ -174,14 +308,31 @@ func TestVideoTranscodeIntegration(t *testing.T) {
 }
 
 func createTestVideo(t *testing.T, outputPath string, duration int, width, height int) {
+	// Determine codecs based on file extension
+	ext := strings.ToLower(filepath.Ext(outputPath))
+
+	var videoCodec, audioCodec string
+	switch ext {
+	case ".webm":
+		videoCodec = "libvpx-vp9"
+		audioCodec = "libopus"
+	case ".mp4":
+		videoCodec = "libx264"
+		audioCodec = "aac"
+	default:
+		// Default to MP4 codecs
+		videoCodec = "libx264"
+		audioCodec = "aac"
+	}
+
 	// Create a test video using FFmpeg with specified duration and size
 	cmd := exec.Command("ffmpeg",
 		"-f", "lavfi",
 		"-i", fmt.Sprintf("testsrc2=duration=%d:size=%dx%d:rate=30", duration, width, height),
 		"-f", "lavfi",
 		"-i", fmt.Sprintf("sine=frequency=1000:duration=%d", duration),
-		"-c:v", "libx264",
-		"-c:a", "aac",
+		"-c:v", videoCodec,
+		"-c:a", audioCodec,
 		"-y", // Overwrite output file
 		outputPath,
 	)
