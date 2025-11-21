@@ -1,6 +1,7 @@
 package config
 
 import (
+	"fmt"
 	"os"
 	"path/filepath"
 )
@@ -64,6 +65,13 @@ func EnsureDirectories() error {
 		if err := os.MkdirAll(dir, 0755); err != nil {
 			return err
 		}
+	}
+
+	if _, err := os.Stat(AppPaths.DefaultSourceVideo); err != nil {
+		if os.IsNotExist(err) {
+			return fmt.Errorf("default source video not found: %s", AppPaths.DefaultSourceVideo)
+		}
+		return fmt.Errorf("failed to access default source video: %w", err)
 	}
 
 	return nil
