@@ -10,86 +10,28 @@ import (
 	"os/exec"
 	"path/filepath"
 	"strings"
-	"time"
 
 	"lorem.video/internal/config"
 	"lorem.video/internal/parser"
 )
 
 type VideoService struct {
+	pregenService *PregenerationService
 }
 
 func NewVideoService() *VideoService {
-	return &VideoService{}
+	s := &VideoService{}
+	s.pregenService = NewPregenerationService(s)
+	return s
 }
 
-// StartupPregeneration runs video pregeneration in the background on app startup
+// StartupPregeneration delegates to the pregeneration service
 func (s *VideoService) StartupPregeneration() {
-	go func() {
-		ctx, cancel := context.WithTimeout(context.Background(), 15*time.Minute)
-		defer cancel()
-
-		_, err := s.PregenerateVideos(ctx)
-		if err != nil {
-			log.Printf("❌ Failed to pregenerate videos: %v", err)
-			return
-		}
-	}()
+	s.pregenService.StartupPregeneration()
 }
 
-// PregenerateVideos generates all pregenerated videos from DefaultPregenSpecs
-func (s *VideoService) PregenerateVideos(ctx context.Context) ([]string, error) {
-	inputPath := config.AppPaths.DefaultSourceVideo
-	filenameNoExt := strings.TrimSuffix(filepath.Base(inputPath), filepath.Ext(inputPath))
-	outputDir := filepath.Join(config.AppPaths.Video, filenameNoExt)
-
-	if err := os.MkdirAll(outputDir, 0755); err != nil {
-		return nil, fmt.Errorf("failed to create output directory: %w", err)
-	}
-
-	var generatedFiles []string
-
-	for i, spec := range config.DefaultPregenSpecs {
-		resultCh, errCh := s.Transcode(ctx, spec, inputPath, outputDir)
-
-		// Wait for completion
-		select {
-		case result := <-resultCh:
-			filename := filepath.Base(result)
-			generatedFiles = append(generatedFiles, filename)
-
-		case err := <-errCh:
-			return nil, fmt.Errorf("failed to generate video %d (%s %dx%d): %w",
-				i+1, spec.Codec, spec.Width, spec.Height, err)
-
-		case <-ctx.Done():
-			return nil, fmt.Errorf("pregeneration cancelled: %w", ctx.Err())
-		}
-	}
-
-	return generatedFiles, nil
-}
-
-func (s *VideoService) findExistingVideo(filename string) string {
-	// Search in pregenerated videos (data/video/bunny folder)
-	inputPath := config.AppPaths.DefaultSourceVideo
-	filenameNoExt := strings.TrimSuffix(filepath.Base(inputPath), filepath.Ext(inputPath))
-	pregeneratedDir := filepath.Join(config.AppPaths.Video, filenameNoExt)
-	pregeneratedPath := filepath.Join(pregeneratedDir, filename)
-
-	if _, err := os.Stat(pregeneratedPath); err == nil {
-		return pregeneratedPath
-	}
-
-	// Search in tmp folder
-	tmpPath := filepath.Join(config.AppPaths.Tmp, filename)
-	if _, err := os.Stat(tmpPath); err == nil {
-		return tmpPath
-	}
-
-	return ""
-}
-
+// GetOrGenerate is the universal method that ensures a video exists for given parameters
+// It searches for existing videos first, then generates if not found
 func (s *VideoService) GetOrGenerate(ctx context.Context, paramsStr string) (<-chan string, <-chan error) {
 	resultCh := make(chan string, 1)
 	errCh := make(chan error, 1)
@@ -108,7 +50,7 @@ func (s *VideoService) GetOrGenerate(ctx context.Context, paramsStr string) (<-c
 	filename := parser.GenerateFilename(&spec)
 
 	// Search for existing video
-	existingPath := s.findExistingVideo(filename)
+	existingPath := s.pregenService.FindExistingVideo(filename)
 	if existingPath != "" {
 		go func() {
 			defer close(resultCh)
@@ -118,8 +60,21 @@ func (s *VideoService) GetOrGenerate(ctx context.Context, paramsStr string) (<-c
 		return resultCh, errCh
 	}
 
-	inputPath := config.AppPaths.DefaultSourceVideo
+	// Video not found, need to generate it
+	log.Printf("Video not found, generating: %s", filename)
+
+	inputPath := s.pregenService.GetDefaultSourceVideo()
 	outputPath := config.AppPaths.Tmp
+
+	// Ensure tmp directory exists
+	if err := os.MkdirAll(outputPath, 0755); err != nil {
+		go func() {
+			defer close(errCh)
+			defer close(resultCh)
+			errCh <- fmt.Errorf("failed to create tmp directory: %w", err)
+		}()
+		return resultCh, errCh
+	}
 
 	return s.Transcode(ctx, spec, inputPath, outputPath)
 }
@@ -135,11 +90,13 @@ func (s *VideoService) TranscodeFromParams(ctx context.Context, paramsStr string
 		return nil, errCh
 	}
 
+	// Apply defaults to create complete VideoSpec
 	spec := config.ApplyDefaultVideoSpec(inputParams)
 
-	inputPath := config.AppPaths.DefaultSourceVideo
+	inputPath := s.pregenService.GetDefaultSourceVideo()
 	outputPath := config.AppPaths.Video
 
+	// Call the main Transcode function
 	return s.Transcode(ctx, spec, inputPath, outputPath)
 }
 

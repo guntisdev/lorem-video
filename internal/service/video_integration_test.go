@@ -43,13 +43,27 @@ func TestGetOrGenerateIntegration(t *testing.T) {
 		DefaultSourceVideo: filepath.Join(tempDir, "sourceVideo", "bunny.mp4"),
 	}
 
-	// Create directories
-	if err := config.EnsureDirectories(); err != nil {
-		t.Fatalf("Failed to create directories: %v", err)
+	// Create directories manually for testing (without validation)
+	dirs := []string{
+		config.AppPaths.Data,
+		config.AppPaths.SourceVideo,
+		config.AppPaths.Video,
+		config.AppPaths.Logs,
+		config.AppPaths.Tmp,
+	}
+	for _, dir := range dirs {
+		if err := os.MkdirAll(dir, 0755); err != nil {
+			t.Fatalf("Failed to create directory %s: %v", dir, err)
+		}
 	}
 
 	// Create a simple test video as source
 	createTestVideo(t, config.AppPaths.DefaultSourceVideo, 2, 640, 360)
+
+	// Now validate that everything is properly set up
+	if err := config.EnsureDirectories(); err != nil {
+		t.Fatalf("Failed to validate directories: %v", err)
+	}
 
 	// Create bunny subdirectory for pregenerated videos
 	bunnyDir := filepath.Join(config.AppPaths.Video, "bunny")
