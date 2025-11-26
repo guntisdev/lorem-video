@@ -9,6 +9,7 @@ import (
 )
 
 type VideoSpec struct {
+	Name         string
 	Width        int
 	Height       int
 	Duration     int // seconds
@@ -21,6 +22,7 @@ type VideoSpec struct {
 }
 
 var DefaultVideoSpec = VideoSpec{
+	Name:         "bunny",
 	Width:        1280,
 	Height:       720,
 	Duration:     20,

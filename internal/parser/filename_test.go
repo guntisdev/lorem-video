@@ -7,6 +7,10 @@ import (
 )
 
 func TestParseFilename(t *testing.T) {
+	// Setup mock source files for testing
+	SetMockSourceFiles([]string{"bunny", "elephant", "cat"})
+	defer ClearMockSourceFiles()
+
 	tests := []struct {
 		name     string
 		filename string
@@ -14,8 +18,9 @@ func TestParseFilename(t *testing.T) {
 	}{
 		{
 			name:     "full specification with CRF",
-			filename: "av1_1280x720_30fps_60s_23crf_aac_128kbps",
+			filename: "bunny_av1_1280x720_30fps_60s_23crf_aac_128kbps",
 			want: &config.VideoSpec{
+				Name:         "bunny",
 				Width:        1280,
 				Height:       720,
 				FPS:          30,
@@ -28,8 +33,9 @@ func TestParseFilename(t *testing.T) {
 		},
 		{
 			name:     "with CBR bitrate and mp4 extension",
-			filename: "h264_1920x1080_60fps_30s_5000cbr_opus_192kbps.mp4",
+			filename: "bunny_h264_1920x1080_60fps_30s_5000cbr_opus_192kbps.mp4",
 			want: &config.VideoSpec{
+				Name:         "bunny",
 				Width:        1920,
 				Height:       1080,
 				FPS:          60,
@@ -43,8 +49,9 @@ func TestParseFilename(t *testing.T) {
 		},
 		{
 			name:     "with webm extension",
-			filename: "vp9_1280x720_30fps_60s_25crf_opus_128kbps.webm",
+			filename: "bunny_vp9_1280x720_30fps_60s_25crf_opus_128kbps.webm",
 			want: &config.VideoSpec{
+				Name:         "bunny",
 				Width:        1280,
 				Height:       720,
 				FPS:          30,
@@ -58,8 +65,9 @@ func TestParseFilename(t *testing.T) {
 		},
 		{
 			name:     "with VBR bitrate",
-			filename: "h265_3840x2160_24fps_120s_8000vbr_aac_256kbps",
+			filename: "bunny_h265_3840x2160_24fps_120s_8000vbr_aac_256kbps",
 			want: &config.VideoSpec{
+				Name:         "bunny",
 				Width:        3840,
 				Height:       2160,
 				FPS:          24,
@@ -72,8 +80,9 @@ func TestParseFilename(t *testing.T) {
 		},
 		{
 			name:     "resolution preset 720p",
-			filename: "vp9_720p_30fps_60s_25crf_vorbis_128kbps",
+			filename: "bunny_vp9_720p_30fps_60s_25crf_vorbis_128kbps",
 			want: &config.VideoSpec{
+				Name:         "bunny",
 				Width:        1280,
 				Height:       720,
 				FPS:          30,
@@ -86,8 +95,9 @@ func TestParseFilename(t *testing.T) {
 		},
 		{
 			name:     "resolution preset 4k",
-			filename: "av1_4k_60fps_120s_28crf_opus_192kbps",
+			filename: "bunny_av1_4k_60fps_120s_28crf_opus_192kbps",
 			want: &config.VideoSpec{
+				Name:         "bunny",
 				Width:        3840,
 				Height:       2160,
 				FPS:          60,
@@ -100,8 +110,9 @@ func TestParseFilename(t *testing.T) {
 		},
 		{
 			name:     "no audio",
-			filename: "h264_1280x720_30fps_10s_23crf_noaudio",
+			filename: "bunny_h264_1280x720_30fps_10s_23crf_noaudio",
 			want: &config.VideoSpec{
+				Name:       "bunny",
 				Width:      1280,
 				Height:     720,
 				FPS:        30,
@@ -113,8 +124,9 @@ func TestParseFilename(t *testing.T) {
 		},
 		{
 			name:     "no video",
-			filename: "novideo_60s_aac_128kbps",
+			filename: "bunny_novideo_60s_aac_128kbps",
 			want: &config.VideoSpec{
+				Name:         "bunny",
 				Duration:     60,
 				Codec:        "novideo",
 				AudioCodec:   "aac",
@@ -123,8 +135,9 @@ func TestParseFilename(t *testing.T) {
 		},
 		{
 			name:     "different order",
-			filename: "30fps_av1_60s_1280x720_23crf_128kbps_aac",
+			filename: "bunny_30fps_av1_60s_1280x720_23crf_128kbps_aac",
 			want: &config.VideoSpec{
+				Name:         "bunny",
 				Width:        1280,
 				Height:       720,
 				FPS:          30,
@@ -195,6 +208,9 @@ func TestParseFilename(t *testing.T) {
 }
 
 func TestParseFilenameEdgeCases(t *testing.T) {
+	// Setup mock source files for testing
+	SetMockSourceFiles([]string{"bunny", "elephant", "cat"})
+	defer ClearMockSourceFiles()
 	tests := []struct {
 		name     string
 		filename string
@@ -250,6 +266,9 @@ func TestParseFilenameEdgeCases(t *testing.T) {
 }
 
 func TestGenerateFilename(t *testing.T) {
+	// Setup mock source files for testing
+	SetMockSourceFiles([]string{"bunny", "elephant", "cat"})
+	defer ClearMockSourceFiles()
 	tests := []struct {
 		name string
 		spec *config.VideoSpec
@@ -258,6 +277,7 @@ func TestGenerateFilename(t *testing.T) {
 		{
 			name: "full specification with mp4",
 			spec: &config.VideoSpec{
+				Name:         "bunny",
 				Width:        1280,
 				Height:       720,
 				FPS:          30,
@@ -268,11 +288,12 @@ func TestGenerateFilename(t *testing.T) {
 				AudioBitrate: 128,
 				Container:    "mp4",
 			},
-			want: "av1_1280x720_30fps_60s_23crf_aac_128kbps.mp4",
+			want: "bunny_av1_1280x720_30fps_60s_23crf_aac_128kbps.mp4",
 		},
 		{
 			name: "webm container",
 			spec: &config.VideoSpec{
+				Name:         "bunny",
 				Width:        1920,
 				Height:       1080,
 				FPS:          60,
@@ -283,7 +304,7 @@ func TestGenerateFilename(t *testing.T) {
 				AudioBitrate: 192,
 				Container:    "webm",
 			},
-			want: "vp9_1920x1080_60fps_30s_25crf_opus_192kbps.webm",
+			want: "bunny_vp9_1920x1080_60fps_30s_25crf_opus_192kbps.webm",
 		},
 		{
 			name: "minimal specification",
@@ -307,6 +328,7 @@ func TestGenerateFilename(t *testing.T) {
 		{
 			name: "cbr bitrate",
 			spec: &config.VideoSpec{
+				Name:         "bunny",
 				Width:        1280,
 				Height:       720,
 				Codec:        "h264",
@@ -315,7 +337,7 @@ func TestGenerateFilename(t *testing.T) {
 				AudioBitrate: 128,
 				Container:    "mp4",
 			},
-			want: "h264_1280x720_5000cbr_aac_128kbps.mp4",
+			want: "bunny_h264_1280x720_5000cbr_aac_128kbps.mp4",
 		},
 		{
 			name: "empty spec",
@@ -335,8 +357,12 @@ func TestGenerateFilename(t *testing.T) {
 }
 
 func TestRoundTripFilename(t *testing.T) {
+	// Setup mock source files for testing
+	SetMockSourceFiles([]string{"bunny", "elephant", "cat"})
+	defer ClearMockSourceFiles()
 	// Test that parsing a generated filename gives back the same spec
 	originalSpec := &config.VideoSpec{
+		Name:         "bunny",
 		Width:        1280,
 		Height:       720,
 		FPS:          30,
@@ -356,6 +382,9 @@ func TestRoundTripFilename(t *testing.T) {
 		return
 	}
 
+	if parsedSpec.Name != originalSpec.Name {
+		t.Errorf("Name = %v, want %v", parsedSpec.Name, originalSpec.Name)
+	}
 	if parsedSpec.Width != originalSpec.Width {
 		t.Errorf("Width = %v, want %v", parsedSpec.Width, originalSpec.Width)
 	}
