@@ -77,7 +77,7 @@ func TestGetOrGenerateIntegration(t *testing.T) {
 		ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 		defer cancel()
 
-		params := "h264_720p_30fps_2s_25crf_aac_96kbps.mp4"
+		params := "bunny_h264_720p_30fps_2s_25crf_aac_96kbps.mp4"
 		resultCh, errCh := service.GetOrGenerate(ctx, params)
 
 		select {
@@ -112,8 +112,8 @@ func TestGetOrGenerateIntegration(t *testing.T) {
 		defer cancel()
 
 		// First, create a pregenerated video
-		params := "h264_480p_30fps_2s_23crf_aac_128kbps.mp4"
-		filename := "h264_854x480_30fps_2s_23crf_aac_128kbps.mp4"
+		params := "bunny_h264_480p_30fps_2s_23crf_aac_128kbps.mp4"
+		filename := "bunny_h264_854x480_30fps_2s_23crf_aac_128kbps.mp4"
 		pregeneratedPath := filepath.Join(bunnyDir, filename)
 
 		// Create the pregenerated video
@@ -142,8 +142,8 @@ func TestGetOrGenerateIntegration(t *testing.T) {
 		defer cancel()
 
 		// First, create a video in tmp folder
-		params := "vp9_720p_30fps_2s_30crf_opus_128kbps.webm"
-		filename := "vp9_1280x720_30fps_2s_30crf_opus_128kbps.webm"
+		params := "bunny_vp9_720p_30fps_2s_30crf_opus_128kbps.webm"
+		filename := "bunny_vp9_1280x720_30fps_2s_30crf_opus_128kbps.webm"
 		tmpPath := filepath.Join(config.AppPaths.Tmp, filename)
 
 		// Create the tmp video
@@ -192,82 +192,82 @@ func TestVideoTranscodeIntegration(t *testing.T) {
 		// Most popular web streaming combinations
 		{
 			name:       "H.264/AAC/MP4 (Most Popular Web)",
-			params:     "h264_1280x720_30fps_1s_23crf_aac_128kbps.mp4",
-			expectFile: "h264_1280x720_30fps_1s_23crf_aac_128kbps.mp4",
+			params:     "bunny_h264_1280x720_30fps_1s_23crf_aac_128kbps.mp4",
+			expectFile: "bunny_h264_1280x720_30fps_1s_23crf_aac_128kbps.mp4",
 			timeout:    20 * time.Second,
 		},
 		{
 			name:       "VP9/Opus/WebM (Modern Web)",
-			params:     "vp9_1280x720_30fps_1s_25crf_opus_128kbps.webm",
-			expectFile: "vp9_1280x720_30fps_1s_25crf_opus_128kbps.webm",
+			params:     "bunny_vp9_1280x720_30fps_1s_25crf_opus_128kbps.webm",
+			expectFile: "bunny_vp9_1280x720_30fps_1s_25crf_opus_128kbps.webm",
 			timeout:    30 * time.Second,
 		},
 		{
 			name:       "H.264/AAC/MP4 (Mobile)",
-			params:     "h264_720p_30fps_1s_25crf_aac_96kbps.mp4",
-			expectFile: "h264_1280x720_30fps_1s_25crf_aac_96kbps.mp4",
+			params:     "bunny_h264_720p_30fps_1s_25crf_aac_96kbps.mp4",
+			expectFile: "bunny_h264_1280x720_30fps_1s_25crf_aac_96kbps.mp4",
 			timeout:    20 * time.Second,
 		},
 
 		// Extended combinations (run in comprehensive mode)
 		{
 			name:       "H.264/AAC/MP4 (1080p)",
-			params:     "h264_1920x1080_30fps_2s_23crf_aac_128kbps.mp4",
-			expectFile: "h264_1920x1080_30fps_2s_23crf_aac_128kbps.mp4",
+			params:     "bunny_h264_1920x1080_30fps_2s_23crf_aac_128kbps.mp4",
+			expectFile: "bunny_h264_1920x1080_30fps_2s_23crf_aac_128kbps.mp4",
 			timeout:    45 * time.Second,
 		},
 		{
 			name:       "AV1/Opus/WebM (Next-gen Web)",
-			params:     "av1_1280x720_30fps_2s_30crf_opus_128kbps.webm",
-			expectFile: "av1_1280x720_30fps_2s_30crf_opus_128kbps.webm",
+			params:     "bunny_av1_1280x720_30fps_2s_30crf_opus_128kbps.webm",
+			expectFile: "bunny_av1_1280x720_30fps_2s_30crf_opus_128kbps.webm",
 			timeout:    2 * time.Minute,
 		},
 		{
 			name:       "H.264/AAC/MP4 (Mobile 480p)",
-			params:     "h264_480p_30fps_2s_26crf_aac_96kbps.mp4",
-			expectFile: "h264_854x480_30fps_2s_26crf_aac_96kbps.mp4",
+			params:     "bunny_h264_480p_30fps_2s_26crf_aac_96kbps.mp4",
+			expectFile: "bunny_h264_854x480_30fps_2s_26crf_aac_96kbps.mp4",
 			timeout:    20 * time.Second,
 		},
 		{
 			name:       "H.265/AAC/MP4 (High Quality)",
-			params:     "h265_1920x1080_30fps_2s_28crf_aac_192kbps.mp4",
-			expectFile: "h265_1920x1080_30fps_2s_28crf_aac_192kbps.mp4",
+			params:     "bunny_h265_1920x1080_30fps_2s_28crf_aac_192kbps.mp4",
+			expectFile: "bunny_h265_1920x1080_30fps_2s_28crf_aac_192kbps.mp4",
 			timeout:    90 * time.Second,
 		},
 		{
 			name:       "H.264/AAC/MP4 (CBR)",
-			params:     "h264_1280x720_30fps_2s_3000cbr_aac_128kbps.mp4",
-			expectFile: "h264_1280x720_30fps_2s_3000cbr_aac_128kbps.mp4",
+			params:     "bunny_h264_1280x720_30fps_2s_3000cbr_aac_128kbps.mp4",
+			expectFile: "bunny_h264_1280x720_30fps_2s_3000cbr_aac_128kbps.mp4",
 			timeout:    30 * time.Second,
 		},
 		{
 			name:       "H.264/AAC/MP4 (VBR)",
-			params:     "h264_1280x720_30fps_2s_3000vbr_aac_128kbps.mp4",
-			expectFile: "h264_1280x720_30fps_2s_3000vbr_aac_128kbps.mp4",
+			params:     "bunny_h264_1280x720_30fps_2s_3000vbr_aac_128kbps.mp4",
+			expectFile: "bunny_h264_1280x720_30fps_2s_3000vbr_aac_128kbps.mp4",
 			timeout:    30 * time.Second,
 		},
 		{
 			name:       "H.264/AAC/MP4 (60fps)",
-			params:     "h264_1280x720_60fps_2s_23crf_aac_128kbps.mp4",
-			expectFile: "h264_1280x720_60fps_2s_23crf_aac_128kbps.mp4",
+			params:     "bunny_h264_1280x720_60fps_2s_23crf_aac_128kbps.mp4",
+			expectFile: "bunny_h264_1280x720_60fps_2s_23crf_aac_128kbps.mp4",
 			timeout:    45 * time.Second,
 		},
 		{
 			name:       "H.264/AAC/MP4 (24fps Cinema)",
-			params:     "h264_1920x1080_24fps_2s_23crf_aac_128kbps.mp4",
-			expectFile: "h264_1920x1080_24fps_2s_23crf_aac_128kbps.mp4",
+			params:     "bunny_h264_1920x1080_24fps_2s_23crf_aac_128kbps.mp4",
+			expectFile: "bunny_h264_1920x1080_24fps_2s_23crf_aac_128kbps.mp4",
 			timeout:    40 * time.Second,
 		},
 		{
 			name:       "Audio Only (AAC/MP4)",
-			params:     "novideo_2s_aac_128kbps.mp4",
-			expectFile: "novideo_2s_aac_128kbps.mp4",
+			params:     "bunny_novideo_2s_aac_128kbps.mp4",
+			expectFile: "bunny_novideo_2s_aac_128kbps.mp4",
 			timeout:    10 * time.Second,
 		},
 		{
 			name:       "Video Only (H.264/MP4)",
-			params:     "h264_1280x720_30fps_2s_23crf_noaudio.mp4",
-			expectFile: "h264_1280x720_30fps_2s_23crf_noaudio.mp4",
+			params:     "bunny_h264_1280x720_30fps_2s_23crf_noaudio.mp4",
+			expectFile: "bunny_h264_1280x720_30fps_2s_23crf_noaudio.mp4",
 			timeout:    30 * time.Second,
 		},
 	}

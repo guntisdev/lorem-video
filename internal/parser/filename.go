@@ -18,7 +18,33 @@ var cbrRegex = regexp.MustCompile(`^(\d+)cbr$`)           // constant bitrate 30
 var vbrRegex = regexp.MustCompile(`^(\d+)vbr$`)           // variable bitrate 3000
 var audioBitrateRegex = regexp.MustCompile(`^(\d+)kbps$`) // 128kbps
 
-// Example: av1_1280x720_30fps_60s_23crf_aac_128kbps.mp4
+var mockSourceFiles []string
+
+func SetMockSourceFiles(files []string) {
+	mockSourceFiles = files
+}
+func ClearMockSourceFiles() {
+	mockSourceFiles = nil
+}
+
+func getSourceFileNames() []string {
+	// Use mock files if available (for testing)
+	if mockSourceFiles != nil {
+		return mockSourceFiles
+	}
+
+	// Try to get real source files
+	var sourceFiles []string
+	if files, err := config.GetSourceVideoFiles(); err == nil {
+		for _, file := range files {
+			baseName := strings.TrimSuffix(filepath.Base(file), filepath.Ext(file))
+			sourceFiles = append(sourceFiles, baseName)
+		}
+	}
+	return sourceFiles
+}
+
+// Example: bunny_av1_1280x720_30fps_60s_23crf_aac_128kbps.mp4
 func ParseFilename(filename string) (*config.VideoSpec, error) {
 	// Extract extension/container
 	ext := strings.ToLower(filepath.Ext(filename))
@@ -29,6 +55,9 @@ func ParseFilename(filename string) (*config.VideoSpec, error) {
 	if ext != "" && !slices.Contains(config.ValidContainers, ext) {
 		return nil, fmt.Errorf("invalid container format: %s (valid formats: %v)", ext, config.ValidContainers)
 	}
+
+	// Get source file names (using mocks if available for testing)
+	sourceFiles := getSourceFileNames()
 
 	filename = strings.TrimSuffix(filename, filepath.Ext(filename))
 	parts := strings.Split(filename, "_")
@@ -87,6 +116,8 @@ func ParseFilename(filename string) (*config.VideoSpec, error) {
 				params.Codec = part
 			} else if slices.Contains(config.ValidAudioCodecs, part) {
 				params.AudioCodec = part
+			} else if slices.Contains(sourceFiles, part) {
+				params.Name = part
 			}
 
 		}
@@ -99,6 +130,10 @@ func ParseFilename(filename string) (*config.VideoSpec, error) {
 // Example output: av1_1280x720_30fps_60s_23crf_aac_128kbps.mp4
 func GenerateFilename(spec *config.VideoSpec) string {
 	var parts []string
+
+	if spec.Name != "" {
+		parts = append(parts, spec.Name)
+	}
 
 	// Add video codec if specified
 	if spec.Codec != "" {

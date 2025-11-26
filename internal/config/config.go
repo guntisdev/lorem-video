@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"slices"
+	"strings"
 )
 
 // Paths holds all application directory paths
@@ -75,4 +77,31 @@ func EnsureDirectories() error {
 	}
 
 	return nil
+}
+
+func GetSourceVideoFiles() ([]string, error) {
+	entries, err := os.ReadDir(AppPaths.SourceVideo)
+	if err != nil {
+		return nil, fmt.Errorf("failed to read source video directory: %w", err)
+	}
+
+	var videoFiles []string
+	for _, entry := range entries {
+		if entry.IsDir() {
+			continue
+		}
+
+		// Check if it's a valid video file
+		ext := strings.ToLower(filepath.Ext(entry.Name()))
+		if ext != "" {
+			ext = ext[1:] // Remove the dot
+		}
+
+		if slices.Contains(ValidContainers, ext) {
+			fullPath := filepath.Join(AppPaths.SourceVideo, entry.Name())
+			videoFiles = append(videoFiles, fullPath)
+		}
+	}
+
+	return videoFiles, nil
 }

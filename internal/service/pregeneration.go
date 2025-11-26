@@ -6,7 +6,6 @@ import (
 	"log"
 	"os"
 	"path/filepath"
-	"slices"
 	"strings"
 	"time"
 
@@ -40,7 +39,7 @@ func (s *PregenerationService) StartupPregeneration() {
 
 // PregenerateAllVideos generates all pregenerated videos for all source files
 func (s *PregenerationService) PregenerateAllVideos(ctx context.Context) (map[string][]string, error) {
-	sourceFiles, err := s.getSourceVideoFiles()
+	sourceFiles, err := config.GetSourceVideoFiles()
 	if err != nil {
 		return nil, fmt.Errorf("failed to get source video files: %w", err)
 	}
@@ -72,6 +71,7 @@ func (s *PregenerationService) PregenerateVideos(ctx context.Context, inputPath 
 	var generatedFiles []string
 
 	for i, spec := range config.DefaultPregenSpecs {
+		spec.Name = filenameNoExt
 		resultCh, errCh := s.videoService.Transcode(ctx, spec, inputPath, outputDir)
 
 		// Wait for completion
@@ -95,8 +95,7 @@ func (s *PregenerationService) PregenerateVideos(ctx context.Context, inputPath 
 // FindExistingVideo searches for an existing video file with the given filename
 // Returns the full path if found, empty string if not found
 func (s *PregenerationService) FindExistingVideo(filename string) string {
-	// Get all source video files to search their corresponding directories
-	sourceFiles, err := s.getSourceVideoFiles()
+	sourceFiles, err := config.GetSourceVideoFiles()
 	if err != nil {
 		log.Printf("Warning: failed to get source video files: %v", err)
 		return ""
@@ -124,32 +123,4 @@ func (s *PregenerationService) FindExistingVideo(filename string) string {
 
 func (s *PregenerationService) GetDefaultSourceVideo() string {
 	return config.AppPaths.DefaultSourceVideo
-}
-
-// getSourceVideoFiles scans the sourceVideo directory and returns all valid video files
-func (s *PregenerationService) getSourceVideoFiles() ([]string, error) {
-	entries, err := os.ReadDir(config.AppPaths.SourceVideo)
-	if err != nil {
-		return nil, fmt.Errorf("failed to read source video directory: %w", err)
-	}
-
-	var videoFiles []string
-	for _, entry := range entries {
-		if entry.IsDir() {
-			continue
-		}
-
-		// Check if it's a valid video file
-		ext := strings.ToLower(filepath.Ext(entry.Name()))
-		if ext != "" {
-			ext = ext[1:] // Remove the dot
-		}
-
-		if slices.Contains(config.ValidContainers, ext) {
-			fullPath := filepath.Join(config.AppPaths.SourceVideo, entry.Name())
-			videoFiles = append(videoFiles, fullPath)
-		}
-	}
-
-	return videoFiles, nil
 }
