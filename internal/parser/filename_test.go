@@ -33,9 +33,9 @@ func TestParseFilename(t *testing.T) {
 		},
 		{
 			name:     "with CBR bitrate and mp4 extension",
-			filename: "bunny_h264_1920x1080_60fps_30s_5000cbr_opus_192kbps.mp4",
+			filename: "cat_h264_1920x1080_60fps_30s_5000cbr_opus_192kbps.mp4",
 			want: &config.VideoSpec{
-				Name:         "bunny",
+				Name:         "cat",
 				Width:        1920,
 				Height:       1080,
 				FPS:          60,
@@ -149,6 +149,22 @@ func TestParseFilename(t *testing.T) {
 			},
 		},
 		{
+			name:     "invalid source video name falls back to default",
+			filename: "invalidvideo_h264_1280x720_30fps_60s_23crf_aac_128kbps.mp4",
+			want: &config.VideoSpec{
+				Name:         "", // Should be empty since invalidvideo is not in mock source files
+				Width:        1280,
+				Height:       720,
+				FPS:          30,
+				Duration:     60,
+				Codec:        "h264",
+				Bitrate:      "23crf",
+				AudioCodec:   "aac",
+				AudioBitrate: 128,
+				Container:    "mp4",
+			},
+		},
+		{
 			name:     "minimal specification",
 			filename: "h264_720p",
 			want: &config.VideoSpec{
@@ -181,6 +197,9 @@ func TestParseFilename(t *testing.T) {
 			}
 			if got.Height != tt.want.Height {
 				t.Errorf("Height = %v, want %v", got.Height, tt.want.Height)
+			}
+			if got.Name != tt.want.Name {
+				t.Errorf("Name = %v, want %v", got.Name, tt.want.Name)
 			}
 			if got.FPS != tt.want.FPS {
 				t.Errorf("FPS = %v, want %v", got.FPS, tt.want.FPS)
@@ -240,6 +259,11 @@ func TestParseFilenameEdgeCases(t *testing.T) {
 			name:     "invalid container format mkv",
 			filename: "h264_1280x720_30fps_60s_23crf_aac_128kbps.mkv",
 			wantErr:  true,
+		},
+		{
+			name:     "invalid source video name uses default",
+			filename: "invalidvideo_h264_1280x720_30fps_60s_23crf_aac_128kbps.mp4",
+			wantErr:  false,
 		},
 	}
 
