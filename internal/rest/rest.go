@@ -19,11 +19,25 @@ func New() *Rest {
 	}
 }
 
+func (rest *Rest) CORSMiddleware(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Access-Control-Allow-Origin", "*")
+		w.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
+		w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization")
+
+		// Handle preflight requests
+		if r.Method == "OPTIONS" {
+			w.WriteHeader(http.StatusOK)
+			return
+		}
+
+		next.ServeHTTP(w, r)
+	})
+}
+
 func (rest *Rest) ServeVideo(w http.ResponseWriter, r *http.Request) {
 	params := r.PathValue("params")
 
-	w.Header().Set("Access-Control-Allow-Origin", "*")
-	w.Header().Set("Access-Control-Allow-Methods", "GET, OPTIONS")
 	w.Header().Set("Accept-Ranges", "bytes")
 
 	resultCh, errCh := rest.videoService.GetOrGenerate(r.Context(), params)
@@ -52,7 +66,6 @@ func (rest *Rest) GetVideoInfo(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	w.Header().Set("Access-Control-Allow-Origin", "*")
 	w.Header().Set("Content-Type", "application/json")
 
 	if err := json.NewEncoder(w).Encode(info); err != nil {
