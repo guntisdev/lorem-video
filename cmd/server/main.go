@@ -3,7 +3,6 @@ package main
 import (
 	"log"
 	"net/http"
-	"os"
 
 	"lorem.video/internal/config"
 	"lorem.video/internal/rest"
@@ -19,28 +18,29 @@ func main() {
 	videoService := service.NewVideoService()
 	videoService.StartupPregeneration()
 
-	r := rest.New()
+	rest := rest.New()
 
-	http.HandleFunc("GET /", func(w http.ResponseWriter, r *http.Request) {
+	mux := http.NewServeMux()
+
+	mux.HandleFunc("GET /", func(w http.ResponseWriter, r *http.Request) {
 		http.ServeFile(w, r, "web/dist/index.html")
 	})
 
-	http.HandleFunc("GET /web/{path...}", func(w http.ResponseWriter, r *http.Request) {
+	mux.HandleFunc("GET /web/{path...}", func(w http.ResponseWriter, r *http.Request) {
 		fs := http.StripPrefix("/web/", http.FileServer(http.Dir("web/dist/")))
 		fs.ServeHTTP(w, r)
 	})
 
-	http.HandleFunc("GET /getInfo/{name}", r.GetVideoInfo)
-	http.HandleFunc("GET /transcode/{params}", r.Transcode)
-	http.HandleFunc("GET /{params}", r.ServeVideo)
+	mux.HandleFunc("GET /getInfo/{name}", rest.GetVideoInfo)
+	mux.HandleFunc("GET /transcode/{params}", rest.Transcode)
+	mux.HandleFunc("GET /{params}", rest.ServeVideo)
 
-	port := os.Getenv("PORT")
-	if port == "" {
-		port = "3000"
-	}
+	handler := rest.CORSMiddleware(mux)
+
+	port := "3000"
 
 	log.Printf("Server starting on port %s...", port)
-	if err := http.ListenAndServe(":"+port, nil); err != nil {
+	if err := http.ListenAndServe(":"+port, handler); err != nil {
 		log.Fatal(err)
 	}
 }
