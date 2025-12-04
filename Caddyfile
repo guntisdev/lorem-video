@@ -1,0 +1,8 @@
+
+lorem.video {
+    reverse_proxy app:3000
+}
+
+www.lorem.video {
+    redir https://lorem.video{uri}
+}
