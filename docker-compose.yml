@@ -5,8 +5,4 @@ services:
       - "8080:3000"
     restart: unless-stopped
     volumes:
-      - lorem-video-data:/app/data
-
-volumes:
-  lorem-video-data:
-    driver: local
+      - ./data:/app/data
