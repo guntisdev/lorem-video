@@ -120,7 +120,7 @@
         
         <div class="example">
             <strong>Web player compatibility:</strong><br>
-            <code>https://{{.Domain}}/cat_1080p_vp9_30fps_30s_25crf_opus_128kbps.webm</code>
+            <code>https://{{.Domain}}/test_1080p_vp9_30fps_30s_25crf_opus_128kbps.webm</code>
         </div>
         
         <div class="example">
@@ -168,7 +168,7 @@
         <div class="grid">
             {{range .SourceVideos}}
             <div class="card">
-                <h4>🎬 {{.}}</h4>
+                <h4>🎬 <a href="https://{{$.Domain}}/{{.}}">{{.}}</a></h4>
                 <p>Source video available for transcoding</p>
                 <p><strong>Usage:</strong> Include "{{.}}" in your filename or omit for default</p>
             </div>
