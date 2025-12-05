@@ -15,6 +15,7 @@ func main() {
 	}
 
 	// Start video pregeneration in background
+	// TODO for initial video create video from ffmpeg command (there is some debug video with bars and audio)
 	videoService := service.NewVideoService()
 	videoService.StartupPregeneration()
 
