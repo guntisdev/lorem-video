@@ -115,6 +115,9 @@ var VideoCodecArgs = map[string][]string{
 
 func ApplyDefaultVideoSpec(input *VideoSpec) VideoSpec {
 	result := DefaultVideoSpec
+	if input.Name != "" {
+		result.Name = input.Name
+	}
 	if input.Width != 0 {
 		result.Width = input.Width
 	}
