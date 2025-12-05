@@ -19,16 +19,10 @@ func main() {
 	videoService.StartupPregeneration()
 
 	rest := rest.New()
-
 	mux := http.NewServeMux()
 
 	mux.HandleFunc("GET /", rest.ServeDocumentation)
-
-	mux.HandleFunc("GET /web/{path...}", func(w http.ResponseWriter, r *http.Request) {
-		fs := http.StripPrefix("/web/", http.FileServer(http.Dir("web/dist/")))
-		fs.ServeHTTP(w, r)
-	})
-
+	mux.HandleFunc("GET /web/{path...}", rest.ServeStaticFiles)
 	mux.HandleFunc("GET /getInfo/{name}", rest.GetVideoInfo)
 	mux.HandleFunc("GET /transcode/{params}", rest.Transcode)
 	mux.HandleFunc("GET /{params}", rest.ServeVideo)

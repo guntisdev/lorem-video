@@ -2,21 +2,38 @@ package rest
 
 import (
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"path/filepath"
 	"strings"
+	"time"
 
 	"lorem.video/internal/service"
 )
 
 type Rest struct {
 	videoService *service.VideoService
+	appVersion   string // Cache-busting version generated at startup
 }
 
 func New() *Rest {
 	return &Rest{
 		videoService: service.NewVideoService(),
+		appVersion:   fmt.Sprintf("%d", time.Now().Unix()),
 	}
+}
+
+func (rest *Rest) ServeStaticFiles(w http.ResponseWriter, r *http.Request) {
+	// Set cache headers - long cache since we use version parameters for cache busting
+	if r.URL.Query().Get("v") != "" {
+		w.Header().Set("Cache-Control", "public, max-age=31536000, immutable") // 1 year
+	} else {
+		// Non-versioned resources get shorter cache
+		w.Header().Set("Cache-Control", "public, max-age=3600") // 1 hour
+	}
+
+	fs := http.StripPrefix("/web/", http.FileServer(http.Dir("web/dist/")))
+	fs.ServeHTTP(w, r)
 }
 
 func (rest *Rest) ServeVideo(w http.ResponseWriter, r *http.Request) {

@@ -10,9 +10,9 @@ import (
 	"lorem.video/internal/config"
 )
 
-// TemplateData holds the data to be passed to the HTML template
 type TemplateData struct {
 	Domain       string
+	Version      string
 	VideoCodecs  []string
 	AudioCodecs  []string
 	Containers   []string
@@ -22,14 +22,12 @@ type TemplateData struct {
 
 // ServeDocumentation serves the documentation page with dynamic data from config
 func (rest *Rest) ServeDocumentation(w http.ResponseWriter, r *http.Request) {
-	// Get resolution names
 	resolutionNames := make([]string, 0, len(config.Resolutions)+1)
 	for name := range config.Resolutions {
 		resolutionNames = append(resolutionNames, name)
 	}
 	resolutionNames = append(resolutionNames, "WxH custom")
 
-	// Get source video names
 	sourceVideoFiles, err := config.GetSourceVideoFiles()
 	var sourceVideoNames []string
 	if err != nil {
@@ -45,9 +43,9 @@ func (rest *Rest) ServeDocumentation(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	// Prepare template data
 	data := TemplateData{
-		Domain:       "lorem.video", // Change this constant for different domains
+		Domain:       "lorem.video",
+		Version:      rest.appVersion, // for caching
 		VideoCodecs:  config.ValidVideoCodecs,
 		AudioCodecs:  config.ValidAudioCodecs,
 		Containers:   config.ValidContainers,
@@ -55,7 +53,6 @@ func (rest *Rest) ServeDocumentation(w http.ResponseWriter, r *http.Request) {
 		SourceVideos: sourceVideoNames,
 	}
 
-	// Parse and execute template
 	tmpl, err := template.ParseFiles("web/dist/index.html")
 	if err != nil {
 		log.Printf("Error parsing template: %v", err)
@@ -63,6 +60,7 @@ func (rest *Rest) ServeDocumentation(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	w.Header().Set("Cache-Control", "no-cache, must-revalidate")
 	w.Header().Set("Content-Type", "text/html")
 	if err := tmpl.Execute(w, data); err != nil {
 		log.Printf("Error executing template: %v", err)
