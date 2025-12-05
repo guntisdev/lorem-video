@@ -134,6 +134,34 @@ th {
     font-size: 1.2rem;
 }
 
+/* Footer */
+.footer {
+    text-align: center;
+    margin-top: 3rem;
+    padding: 2rem;
+    background: var(--light);
+    border-top: 1px solid var(--border);
+    color: #6b7280;
+    font-size: 0.9rem;
+}
+
+.footer a {
+    color: var(--primary);
+    text-decoration: none;
+}
+
+.footer a:hover {
+    text-decoration: underline;
+}
+
+.footer code {
+    background: #e5e7eb;
+    color: #374151;
+    padding: 0.2rem 0.4rem;
+    border-radius: 3px;
+    font-size: 0.85rem;
+}
+
 /* Mobile optimizations - at the end to override desktop styles */
 @media (max-width: 768px) {
     body {
