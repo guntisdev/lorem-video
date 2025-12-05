@@ -11,32 +11,36 @@
 
     <div class="header">
         <h1>🎬 lorem.video</h1>
-        <p>On-demand video transcoding API</p>
+        <p>Placeholder videos for developers - like lorem ipsum, but for video</p>
     </div>
 
     <div class="section">
         <h2>📖 Getting Started</h2>
-        <p>Generate videos on-demand by requesting URLs with specific parameters. Videos are transcoded automatically and cached for future requests.</p>
+        <p>Need free sample videos for testing your app? Just request a URL with your specs. For prototyping video players, testing responsive designs, or generating placeholder content during development.</p>
         
         <div class="demo">
             <p>Try it now:</p>
-            <a href="/720p" target="_blank">📺 /720p</a>
+            <a href="/720p" target="_blank">📺 https://{{.Domain}}/720p</a>
         </div>
     </div>
 
     <div class="section">
-        <h2>🚀 Simple Examples</h2>
+        <h2>🚀 Quick Start Examples</h2>
         <div class="example">
-            <strong>Basic resolution:</strong><br>
-            <code>https://{{.Domain}}/720p</code> - 720p video with default settings
+            <strong>Basic placeholder:</strong><br>
+            <code>https://{{.Domain}}/720p</code> - Standard 720p test video
         </div>
         <div class="example">
-            <strong>Different codec:</strong><br>
-            <code>https://{{.Domain}}/720p_av1</code> - AV1 codec for better compression
+            <strong>Custom resolution:</strong><br>
+            <code>https://{{.Domain}}/1280x720</code> - Custom 1280x720 test video
         </div>
         <div class="example">
-            <strong>Custom duration:</strong><br>
-            <code>https://{{.Domain}}/720p_h264_10s</code> - 10-second video
+            <strong>Modern codec testing:</strong><br>
+            <code>https://{{.Domain}}/720p_av1</code> - Test AV1 codec support
+        </div>
+        <div class="example">
+            <strong>Short clips for prototyping:</strong><br>
+            <code>https://{{.Domain}}/720p_h264_10s</code> - Quick 10-second sample
         </div>
     </div>
 
@@ -84,33 +88,70 @@
                 <tr><td>Container</td><td>extension</td><td>.mp4, .webm</td></tr>
             </tbody>
         </table>
+        
+        <div class="warning">
+            <strong>📝 Parameter Rules:</strong>
+            <ul>
+                <li>Parameters are separated by underscores (<code>_</code>)</li>
+                <li>If multiple parameters specify the same setting, the <strong>last one wins</strong></li>
+                <li>Unknown/invalid parameters are silently ignored</li>
+                <li>Example: <code>/720p_h264_30fps_h265_60fps</code> → uses h265 codec and 60fps</li>
+            </ul>
+        </div>
     </div>
 
     <div class="section">
-        <h2>📚 Advanced Examples</h2>
+        <h2>📚 Testing Scenarios</h2>
         
         <div class="example">
-            <strong>High quality 4K:</strong><br>
+            <strong>High-res performance testing:</strong><br>
             <code>https://{{.Domain}}/bunny_4k_h265_30fps_60s_23crf_aac_192kbps.mp4</code>
         </div>
         
         <div class="example">
-            <strong>Mobile optimized:</strong><br>
+            <strong>Mobile app development:</strong><br>
             <code>https://{{.Domain}}/bunny_480p_h264_30fps_15s_26crf_aac_96kbps.mp4</code>
         </div>
         
         <div class="example">
-            <strong>Web streaming:</strong><br>
+            <strong>Web player compatibility:</strong><br>
             <code>https://{{.Domain}}/bunny_1080p_vp9_30fps_30s_25crf_opus_128kbps.webm</code>
         </div>
         
         <div class="example">
-            <strong>Audio only:</strong><br>
+            <strong>Audio player testing:</strong><br>
             <code>https://{{.Domain}}/bunny_novideo_30s_aac_128kbps.mp4</code>
         </div>
 
         <div class="warning">
-            <strong>⚠️ Note:</strong> First-time transcoding may take time depending on complexity. AV1 encoding is slower but produces smaller files.
+            <strong>⚠️ Important Notes:</strong>
+            <ul>
+                <li>First-time transcoding may take time depending on complexity</li>
+                <li>AV1 encoding is slower but produces smaller files</li>
+                <li><strong>License incompatibilities:</strong> Some codec/container combinations may fail due to FFmpeg licensing restrictions (e.g., H.264 with WebM). Errors are returned directly from FFmpeg.</li>
+            </ul>
+        </div>
+    </div>
+
+    <div class="section">
+        <h2>🛠️ Usage</h2>
+        <div class="grid">
+            <div class="card">
+                <h4>🧪 Testing</h4>
+                <p>Video player development, codec support testing, performance benchmarking</p>
+            </div>
+            <div class="card">
+                <h4>🎨 Prototyping</h4>
+                <p>Mockups, demos, design systems, responsive video layouts</p>
+            </div>
+            <div class="card">
+                <h4>📱 Development</h4>
+                <p>Mobile apps, web apps, streaming services, media processing pipelines</p>
+            </div>
+            <div class="card">
+                <h4>🔧 CI/CD</h4>
+                <p>Automated testing, integration tests, deployment validation</p>
+            </div>
         </div>
     </div>
 
@@ -148,11 +189,6 @@
                     <td><code>/getInfo/{filename}</code></td>
                     <td>GET</td>
                     <td>Get technical information about a video file</td>
-                </tr>
-                <tr>
-                    <td><code>/transcode/{params}</code></td>
-                    <td>GET</td>
-                    <td>Force transcoding (returns JSON with file path)</td>
                 </tr>
             </tbody>
         </table>
