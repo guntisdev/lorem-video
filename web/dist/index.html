@@ -3,69 +3,160 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Kittens Video App</title>
-    
-    <!-- CSS -->
-    <link rel="stylesheet" href="/web/styles.css">
-    
-    <!-- Favicon -->
+    <title>lorem.video - placeholder for video</title>
     <link rel="icon" href="/web/favicon.svg" type="image/svg+xml">
+    <link rel="stylesheet" href="/web/styles.css">
 </head>
 <body>
-    <div class="container">
-        <h1>🎬 Kittens Video App</h1>
+
+    <div class="header">
+        <h1>🎬 lorem.video</h1>
+        <p>On-demand video transcoding API</p>
+    </div>
+
+    <div class="section">
+        <h2>📖 Getting Started</h2>
+        <p>Generate videos on-demand by requesting URLs with specific parameters. Videos are transcoded automatically and cached for future requests.</p>
         
-        <div class="info">
-            <p>Welcome to the video transcoding app! This is a test page to verify CSS and favicon are loading correctly.</p>
-        </div>
-        
-        <div class="video-container">
-            <input type="text" placeholder="Enter video parameters (e.g., 720p_h264_30fps)" id="videoParams">
-            <button onclick="testTranscode()">Test Transcode</button>
-            <button onclick="testVideoInfo()">Test Video Info</button>
-        </div>
-        
-        <div id="output" class="info" style="display:none;">
-            <h3>Output:</h3>
-            <pre id="result"></pre>
+        <div class="demo">
+            <p>Try it now:</p>
+            <a href="/720p" target="_blank">📺 /720p</a>
         </div>
     </div>
 
-    <script>
-        function testTranscode() {
-            const params = document.getElementById('videoParams').value || '720p_h264_30fps';
-            const output = document.getElementById('output');
-            const result = document.getElementById('result');
-            
-            output.style.display = 'block';
-            result.textContent = 'Testing transcode with: ' + params;
-            
-            fetch(`/video/transcode/${params}`)
-                .then(response => response.json())
-                .then(data => {
-                    result.textContent = JSON.stringify(data, null, 2);
-                })
-                .catch(error => {
-                    result.textContent = 'Error: ' + error.message;
-                });
-        }
+    <div class="section">
+        <h2>🚀 Simple Examples</h2>
+        <div class="example">
+            <strong>Basic resolution:</strong><br>
+            <code>https://{{.Domain}}/720p</code> - 720p video with default settings
+        </div>
+        <div class="example">
+            <strong>Different codec:</strong><br>
+            <code>https://{{.Domain}}/720p_av1</code> - AV1 codec for better compression
+        </div>
+        <div class="example">
+            <strong>Custom duration:</strong><br>
+            <code>https://{{.Domain}}/720p_h264_10s</code> - 10-second video
+        </div>
+    </div>
+
+    <div class="section">
+        <h2>⚙️ Available Parameters</h2>
         
-        function testVideoInfo() {
-            const output = document.getElementById('output');
-            const result = document.getElementById('result');
+        <div class="grid">
+            <div class="card">
+                <h4>📏 Resolutions</h4>
+                <div>{{range .Resolutions}}<span class="badge">{{.}}</span>{{end}}</div>
+            </div>
             
-            output.style.display = 'block';
-            result.textContent = 'Testing video info...';
+            <div class="card">
+                <h4>🎥 Video Codecs</h4>
+                <div>{{range .VideoCodecs}}<span class="badge">{{.}}</span>{{end}}</div>
+            </div>
             
-            fetch('/video/getInfo/test.mp4')
-                .then(response => response.json())
-                .then(data => {
-                    result.textContent = JSON.stringify(data, null, 2);
-                })
-                .catch(error => {
-                    result.textContent = 'Error: ' + error.message;
-                });
-        }
-    </script>
+            <div class="card">
+                <h4>🔊 Audio Codecs</h4>
+                <div>{{range .AudioCodecs}}<span class="badge">{{.}}</span>{{end}}</div>
+            </div>
+            
+            <div class="card">
+                <h4>📦 Containers</h4>
+                <div>{{range .Containers}}<span class="badge">{{.}}</span>{{end}}</div>
+            </div>
+        </div>
+        
+        <table>
+            <thead>
+                <tr>
+                    <th>Parameter</th>
+                    <th>Format</th>
+                    <th>Examples</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr><td>Resolution</td><td>WxH or preset</td><td>1280x720, 720p, 480p</td></tr>
+                <tr><td>Video Codec</td><td>codec name</td><td>h264, av1, vp9, h265</td></tr>
+                <tr><td>Frame Rate</td><td>NUMBERfps</td><td>30fps, 60fps, 24fps</td></tr>
+                <tr><td>Duration</td><td>NUMBERs</td><td>10s, 30s, 60s</td></tr>
+                <tr><td>Video Bitrate</td><td>NUMBERcrf/cbr/vbr</td><td>25crf, 3000cbr, 2000vbr</td></tr>
+                <tr><td>Audio Codec</td><td>codec name</td><td>aac, opus, vorbis</td></tr>
+                <tr><td>Audio Bitrate</td><td>NUMBERkbps</td><td>128kbps, 96kbps, 192kbps</td></tr>
+                <tr><td>Container</td><td>extension</td><td>.mp4, .webm</td></tr>
+            </tbody>
+        </table>
+    </div>
+
+    <div class="section">
+        <h2>📚 Advanced Examples</h2>
+        
+        <div class="example">
+            <strong>High quality 4K:</strong><br>
+            <code>https://{{.Domain}}/bunny_4k_h265_30fps_60s_23crf_aac_192kbps.mp4</code>
+        </div>
+        
+        <div class="example">
+            <strong>Mobile optimized:</strong><br>
+            <code>https://{{.Domain}}/bunny_480p_h264_30fps_15s_26crf_aac_96kbps.mp4</code>
+        </div>
+        
+        <div class="example">
+            <strong>Web streaming:</strong><br>
+            <code>https://{{.Domain}}/bunny_1080p_vp9_30fps_30s_25crf_opus_128kbps.webm</code>
+        </div>
+        
+        <div class="example">
+            <strong>Audio only:</strong><br>
+            <code>https://{{.Domain}}/bunny_novideo_30s_aac_128kbps.mp4</code>
+        </div>
+
+        <div class="warning">
+            <strong>⚠️ Note:</strong> First-time transcoding may take time depending on complexity. AV1 encoding is slower but produces smaller files.
+        </div>
+    </div>
+
+    <div class="section">
+        <h2>📹 Available Source Videos</h2>
+        <p>Current source videos available for transcoding:</p>
+        <div class="grid">
+            {{range .SourceVideos}}
+            <div class="card">
+                <h4>🎬 {{.}}</h4>
+                <p>Source video available for transcoding</p>
+                <p><strong>Usage:</strong> Include "{{.}}" in your filename or omit for default</p>
+            </div>
+            {{end}}
+        </div>
+    </div>
+
+    <div class="section">
+        <h2>🔗 API Endpoints</h2>
+        <table>
+            <thead>
+                <tr>
+                    <th>Endpoint</th>
+                    <th>Method</th>
+                    <th>Description</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td><code>/{params}</code></td>
+                    <td>GET</td>
+                    <td>Get or generate video with specified parameters</td>
+                </tr>
+                <tr>
+                    <td><code>/getInfo/{filename}</code></td>
+                    <td>GET</td>
+                    <td>Get technical information about a video file</td>
+                </tr>
+                <tr>
+                    <td><code>/transcode/{params}</code></td>
+                    <td>GET</td>
+                    <td>Force transcoding (returns JSON with file path)</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
 </body>
 </html>

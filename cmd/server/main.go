@@ -22,9 +22,7 @@ func main() {
 
 	mux := http.NewServeMux()
 
-	mux.HandleFunc("GET /", func(w http.ResponseWriter, r *http.Request) {
-		http.ServeFile(w, r, "web/dist/index.html")
-	})
+	mux.HandleFunc("GET /", rest.ServeDocumentation)
 
 	mux.HandleFunc("GET /web/{path...}", func(w http.ResponseWriter, r *http.Request) {
 		fs := http.StripPrefix("/web/", http.FileServer(http.Dir("web/dist/")))
