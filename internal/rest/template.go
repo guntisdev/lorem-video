@@ -1,6 +1,7 @@
 package rest
 
 import (
+	"fmt"
 	"html/template"
 	"log"
 	"net/http"
@@ -18,6 +19,15 @@ type TemplateData struct {
 	Containers   []string
 	Resolutions  []string
 	SourceVideos []string
+	// Defaults from DefaultVideoSpec
+	DefaultResolution   string
+	DefaultCodec        string
+	DefaultFPS          int
+	DefaultDuration     int
+	DefaultBitrate      string
+	DefaultAudioCodec   string
+	DefaultAudioBitrate int
+	DefaultContainer    string
 }
 
 // ServeDocumentation serves the documentation page with dynamic data from config
@@ -51,6 +61,15 @@ func (rest *Rest) ServeDocumentation(w http.ResponseWriter, r *http.Request) {
 		Containers:   config.ValidContainers,
 		Resolutions:  resolutionNames,
 		SourceVideos: sourceVideoNames,
+
+		DefaultResolution:   fmt.Sprintf("%dx%d", config.DefaultVideoSpec.Width, config.DefaultVideoSpec.Height),
+		DefaultCodec:        config.DefaultVideoSpec.Codec,
+		DefaultFPS:          config.DefaultVideoSpec.FPS,
+		DefaultDuration:     config.DefaultVideoSpec.Duration,
+		DefaultBitrate:      config.DefaultVideoSpec.Bitrate,
+		DefaultAudioCodec:   config.DefaultVideoSpec.AudioCodec,
+		DefaultAudioBitrate: config.DefaultVideoSpec.AudioBitrate,
+		DefaultContainer:    config.DefaultVideoSpec.Container,
 	}
 
 	tmpl, err := template.ParseFiles("web/dist/index.html")

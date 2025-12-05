@@ -42,6 +42,10 @@
             <strong>Short clips for prototyping:</strong><br>
             <code>https://{{.Domain}}/720p_h264_10s</code> - Quick 10-second sample
         </div>
+        <div class="example">
+            <strong>Change video source:</strong><br>
+            <code>https://{{.Domain}}/cat_128kbps</code> - Cat video instead of default bunny
+        </div>
     </div>
 
     <div class="section">
@@ -74,18 +78,19 @@
                 <tr>
                     <th>Parameter</th>
                     <th>Format</th>
-                    <th>Examples</th>
+                    <th>Default</th>
                 </tr>
             </thead>
             <tbody>
-                <tr><td>Resolution</td><td>WxH or preset</td><td>1280x720, 720p, 480p</td></tr>
-                <tr><td>Video Codec</td><td>codec name</td><td>h264, av1, vp9, h265</td></tr>
-                <tr><td>Frame Rate</td><td>NUMBERfps</td><td>30fps, 60fps, 24fps</td></tr>
-                <tr><td>Duration</td><td>NUMBERs</td><td>10s, 30s, 60s</td></tr>
-                <tr><td>Video Bitrate</td><td>NUMBERcrf/cbr/vbr</td><td>25crf, 3000cbr, 2000vbr</td></tr>
-                <tr><td>Audio Codec</td><td>codec name</td><td>aac, opus, vorbis</td></tr>
-                <tr><td>Audio Bitrate</td><td>NUMBERkbps</td><td>128kbps, 96kbps, 192kbps</td></tr>
-                <tr><td>Container</td><td>extension</td><td>.mp4, .webm</td></tr>
+                <tr><td>Name</td><td>input source</td><td>bunny</td></tr>
+                <tr><td>Resolution</td><td>WxH or preset</td><td>{{.DefaultResolution}} (720p)</td></tr>
+                <tr><td>Video Codec</td><td>codec name</td><td>{{.DefaultCodec}}</td></tr>
+                <tr><td>Frame Rate</td><td>NUMBERfps</td><td>{{.DefaultFPS}}fps</td></tr>
+                <tr><td>Duration</td><td>NUMBERs</td><td>{{.DefaultDuration}}s</td></tr>
+                <tr><td>Video Bitrate</td><td>NUMBERcrf/cbr/vbr</td><td>{{.DefaultBitrate}}</td></tr>
+                <tr><td>Audio Codec</td><td>codec name</td><td>{{.DefaultAudioCodec}}</td></tr>
+                <tr><td>Audio Bitrate</td><td>NUMBERkbps</td><td>{{.DefaultAudioBitrate}}kbps</td></tr>
+                <tr><td>Container</td><td>extension</td><td>.{{.DefaultContainer}}</td></tr>
             </tbody>
         </table>
         
@@ -110,12 +115,12 @@
         
         <div class="example">
             <strong>Mobile app development:</strong><br>
-            <code>https://{{.Domain}}/bunny_480p_h264_30fps_15s_26crf_aac_96kbps.mp4</code>
+            <code>https://{{.Domain}}/cat_480p_h264_30fps_15s_26crf_aac_96kbps.mp4</code>
         </div>
         
         <div class="example">
             <strong>Web player compatibility:</strong><br>
-            <code>https://{{.Domain}}/bunny_1080p_vp9_30fps_30s_25crf_opus_128kbps.webm</code>
+            <code>https://{{.Domain}}/cat_1080p_vp9_30fps_30s_25crf_opus_128kbps.webm</code>
         </div>
         
         <div class="example">
@@ -126,6 +131,8 @@
         <div class="warning">
             <strong>⚠️ Important Notes:</strong>
             <ul>
+                <li>Most popular codecs and resolutions are pregenerated</li>
+                <li>Unconventional params transcodes on demand and stays in cache</li>
                 <li>First-time transcoding may take time depending on complexity</li>
                 <li>AV1 encoding is slower but produces smaller files</li>
                 <li><strong>License incompatibilities:</strong> Some codec/container combinations may fail due to FFmpeg licensing restrictions (e.g., H.264 with WebM). Errors are returned directly from FFmpeg.</li>
