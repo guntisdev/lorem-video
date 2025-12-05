@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"strings"
 	"time"
@@ -59,7 +60,6 @@ func (s *PregenerationService) PregenerateAllVideos(ctx context.Context) (map[st
 	return results, nil
 }
 
-// PregenerateVideos generates all pregenerated videos from DefaultPregenSpecs for a specific source file
 func (s *PregenerationService) PregenerateVideos(ctx context.Context, inputPath string) ([]string, error) {
 	filenameNoExt := strings.TrimSuffix(filepath.Base(inputPath), filepath.Ext(inputPath))
 	outputDir := filepath.Join(config.AppPaths.Video, filenameNoExt)
@@ -123,4 +123,42 @@ func (s *PregenerationService) FindExistingVideo(filename string) string {
 
 func (s *PregenerationService) GetDefaultSourceVideo() string {
 	return config.AppPaths.DefaultSourceVideo
+}
+
+// GenerateDefaultSourceVideo creates a default test video using FFmpeg generators
+func GenerateDefaultSourceVideo(outputPath string) error {
+	cmd := exec.Command("ffmpeg",
+		"-f", "lavfi",
+		"-i", "testsrc2=duration=60:size=1920x1080:rate=30", // Test pattern video
+		"-f", "lavfi",
+		"-i", "sine=frequency=440:duration=60", // 440Hz test tone
+		"-c:v", "libx264",
+		"-preset", "fast",
+		"-crf", "25",
+		"-c:a", "aac",
+		"-b:a", "128k",
+		"-y", // Overwrite if exists
+		outputPath,
+	)
+
+	if err := cmd.Run(); err != nil {
+		return fmt.Errorf("ffmpeg failed to generate test video: %w", err)
+	}
+
+	log.Printf("Generated default source video: %s", outputPath)
+	return nil
+}
+
+// EnsureDefaultSourceVideo checks if default source video exists and generates it if not
+func EnsureDefaultSourceVideo() error {
+	defaultPath := config.AppPaths.DefaultSourceVideo
+
+	if _, err := os.Stat(defaultPath); os.IsNotExist(err) {
+		log.Printf("Default source video not found, generating: %s", defaultPath)
+		return GenerateDefaultSourceVideo(defaultPath)
+	} else if err != nil {
+		return fmt.Errorf("failed to check default source video: %w", err)
+	}
+
+	return nil
 }

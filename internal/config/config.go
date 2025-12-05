@@ -69,13 +69,6 @@ func EnsureDirectories() error {
 		}
 	}
 
-	if _, err := os.Stat(AppPaths.DefaultSourceVideo); err != nil {
-		if os.IsNotExist(err) {
-			return fmt.Errorf("default source video not found: %s", AppPaths.DefaultSourceVideo)
-		}
-		return fmt.Errorf("failed to access default source video: %w", err)
-	}
-
 	return nil
 }
 
