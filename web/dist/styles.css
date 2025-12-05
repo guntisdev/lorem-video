@@ -50,9 +50,18 @@ h3 { color: var(--primary); }
 .example code {
     background: var(--dark);
     color: white;
-    padding: 0.2rem 0.5rem;
+    padding: 0.5rem;
     border-radius: 4px;
-    font-family: 'Monaco', 'Consolas', monospace;
+    font-family: 'Monaco', 'Consolas', 'SF Mono', monospace;
+    display: block;
+    margin-top: 0.5rem;
+    
+    /* Fix URL wrapping - prevents overflow */
+    word-break: break-all;
+    white-space: pre-wrap;
+    overflow-wrap: break-word;
+    line-height: 1.4;
+    font-size: 0.9rem;
 }
 
 .grid {
@@ -123,4 +132,70 @@ th {
     text-decoration: none;
     font-weight: bold;
     font-size: 1.2rem;
+}
+
+/* Mobile optimizations - at the end to override desktop styles */
+@media (max-width: 768px) {
+    body {
+        padding: 0.5rem; /* Much less padding on mobile */
+    }
+    
+    .header {
+        padding: 0.5rem; /* Reduced from 2rem */
+        margin-bottom: 1.5rem; /* Reduced from 3rem */
+    }
+    
+    .section {
+        padding: 0.5rem; /* Reduced from 2rem */
+        margin-bottom: 1rem; /* Reduced from 2rem */
+    }
+    
+    .grid {
+        grid-template-columns: 1fr; /* Single column on mobile */
+        gap: 0.75rem;
+    }
+    
+    .card {
+        padding: 0.75rem; /* Reduced padding */
+    }
+    
+    .example {
+        padding: 0.75rem; /* Reduced padding */
+        margin: 0.75rem 0;
+    }
+    
+    .example code {
+        font-size: 0.8rem;
+        padding: 0.4rem;
+    }
+    
+    .demo {
+        padding: 1rem; /* Reduced from 2rem */
+        margin: 1rem 0; /* Reduced from 2rem */
+    }
+    
+    th, td {
+        padding: 0.5rem 0.25rem; /* Reduced table padding */
+        font-size: 0.9rem;
+    }
+}
+
+/* Extra small screens */
+@media (max-width: 480px) {
+    body {
+        padding: 0.25rem; /* Even less padding */
+    }
+    
+    .section {
+        padding: 0.75rem;
+    }
+    
+    .header {
+        padding: 0.75rem;
+    }
+    
+    .example code {
+        font-size: 0.75rem;
+        padding: 0.3rem;
+    }
 }
