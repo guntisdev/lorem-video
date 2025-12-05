@@ -11,11 +11,13 @@ import (
 
 func main() {
 	if err := config.EnsureDirectories(); err != nil {
-		log.Fatalf("Failed to create directories %v", err)
+		log.Fatalf("Failed to create directories: %v", err)
 	}
 
-	// Start video pregeneration in background
-	// TODO for initial video create video from ffmpeg command (there is some debug video with bars and audio)
+	if err := service.EnsureDefaultSourceVideo(); err != nil {
+		log.Fatalf("Failed to create default source video: %v", err)
+	}
+
 	videoService := service.NewVideoService()
 	videoService.StartupPregeneration()
 
