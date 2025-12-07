@@ -109,14 +109,21 @@ func (s *VideoService) Transcode(ctx context.Context, spec config.VideoSpec, inp
 	filename := parser.GenerateFilename(&spec)
 	fullOutputPath := filepath.Join(outputPath, filename)
 
-	// Check if file already exists
-	if _, err := os.Stat(fullOutputPath); err == nil {
-		go func() {
-			defer close(resultCh)
-			defer close(errCh)
-			resultCh <- fullOutputPath
-		}()
-		return resultCh, errCh
+	// Check if file already exists and validate its size
+	if stat, err := os.Stat(fullOutputPath); err == nil {
+		// Check if file size is reasonable (>1KB to avoid corrupted files like 48-byte ones)
+		if stat.Size() > 1024 {
+			go func() {
+				defer close(resultCh)
+				defer close(errCh)
+				resultCh <- fullOutputPath
+			}()
+			return resultCh, errCh
+		} else {
+			// File is corrupted (too small), remove it and regenerate
+			log.Printf("Found corrupted file (size: %d bytes), removing: %s", stat.Size(), fullOutputPath)
+			os.Remove(fullOutputPath)
+		}
 	}
 
 	go func() {
