@@ -137,6 +137,14 @@ func (s *VideoService) Transcode(ctx context.Context, spec config.VideoSpec, inp
 				spec.Width, spec.Height, spec.Width, spec.Height),
 		}
 
+		// streaming flags based on format
+		switch spec.Container {
+		case "mp4":
+			args = append(args, "-movflags", "frag_keyframe+empty_moov")
+		case "webm":
+			args = append(args, "-f", "webm")
+		}
+
 		videoCodec := config.VideoCodecNameMap[spec.Codec]
 
 		if videoCodec != "none" {
@@ -199,7 +207,9 @@ func (s *VideoService) Transcode(ctx context.Context, spec config.VideoSpec, inp
 }
 
 func (s *VideoService) GetInfo(name string) (*config.FFProbeOutput, error) {
-	videoPath := filepath.Join(config.AppPaths.Video, name)
+	// TODO convert name to spec and chek data/video first and then data/tmp
+	// HACK "bunny" is hardoded for now
+	videoPath := filepath.Join(config.AppPaths.Video, "bunny", name)
 
 	if _, err := os.Stat(videoPath); os.IsNotExist(err) {
 		return nil, fmt.Errorf("video not found: %s", name)
