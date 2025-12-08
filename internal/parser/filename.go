@@ -2,6 +2,7 @@ package parser
 
 import (
 	"fmt"
+	"os"
 	"path/filepath"
 	"regexp"
 	"slices"
@@ -127,7 +128,7 @@ func ParseFilename(filename string) (*config.VideoSpec, error) {
 }
 
 // GenerateFilename creates a filename string from VideoSpec
-// Example output: av1_1280x720_30fps_60s_23crf_aac_128kbps.mp4
+// Example output: bunny_av1_1280x720_30fps_60s_23crf_aac_128kbps.mp4
 func GenerateFilename(spec *config.VideoSpec) string {
 	var parts []string
 
@@ -179,4 +180,20 @@ func GenerateFilename(spec *config.VideoSpec) string {
 	}
 
 	return filename
+}
+
+func FindExistingVideo(filename string, spec *config.VideoSpec) string {
+	// Search in video/ pregen folder
+	pregenPath := filepath.Join(config.AppPaths.Video, spec.Name, filename)
+	if _, err := os.Stat(pregenPath); err == nil {
+		return pregenPath
+	}
+
+	// Search in tmp folder
+	tmpPath := filepath.Join(config.AppPaths.Tmp, filename)
+	if _, err := os.Stat(tmpPath); err == nil {
+		return tmpPath
+	}
+
+	return ""
 }

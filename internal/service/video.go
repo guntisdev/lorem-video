@@ -49,8 +49,7 @@ func (s *VideoService) GetOrGenerate(ctx context.Context, paramsStr string) (<-c
 	spec := config.ApplyDefaultVideoSpec(inputParams)
 	filename := parser.GenerateFilename(&spec)
 
-	// Search for existing video
-	existingPath := s.pregenService.FindExistingVideo(filename)
+	existingPath := parser.FindExistingVideo(filename, &spec)
 	if existingPath != "" {
 		go func() {
 			defer close(resultCh)
@@ -60,28 +59,24 @@ func (s *VideoService) GetOrGenerate(ctx context.Context, paramsStr string) (<-c
 		return resultCh, errCh
 	}
 
-	// Video not found, need to generate it
-	log.Printf("Video not found, generating: %s", filename)
-
-	inputPath := s.pregenService.GetDefaultSourceVideo()
-	outputPath := config.AppPaths.Tmp
-
-	// Ensure tmp directory exists
-	if err := os.MkdirAll(outputPath, 0755); err != nil {
+	// TODO harcdoded .mp4 extension for source video. should be improved later
+	inputPath := filepath.Join(config.AppPaths.SourceVideo, spec.Name+".mp4")
+	if _, err := os.Stat(inputPath); err != nil {
 		go func() {
 			defer close(errCh)
 			defer close(resultCh)
-			errCh <- fmt.Errorf("failed to create tmp directory: %w", err)
+			errCh <- fmt.Errorf("failed to find source video: %s", spec.Name)
 		}()
 		return resultCh, errCh
 	}
 
-	return s.Transcode(ctx, spec, inputPath, outputPath)
+	log.Printf("Video not found, generating: %s", filename)
+
+	return s.Transcode(ctx, spec, inputPath, config.AppPaths.Tmp)
 }
 
 // TranscodeFromParams parses parameters and calls Transcode with appropriate paths
 func (s *VideoService) TranscodeFromParams(ctx context.Context, paramsStr string) (<-chan string, <-chan error) {
-	// Parse the parameters
 	inputParams, err := parser.ParseFilename(paramsStr)
 	if err != nil {
 		errCh := make(chan error, 1)
@@ -90,13 +85,12 @@ func (s *VideoService) TranscodeFromParams(ctx context.Context, paramsStr string
 		return nil, errCh
 	}
 
-	// Apply defaults to create complete VideoSpec
 	spec := config.ApplyDefaultVideoSpec(inputParams)
 
+	// Operates only with default source video for now
 	inputPath := s.pregenService.GetDefaultSourceVideo()
 	outputPath := config.AppPaths.Video
 
-	// Call the main Transcode function
 	return s.Transcode(ctx, spec, inputPath, outputPath)
 }
 
@@ -109,21 +103,14 @@ func (s *VideoService) Transcode(ctx context.Context, spec config.VideoSpec, inp
 	filename := parser.GenerateFilename(&spec)
 	fullOutputPath := filepath.Join(outputPath, filename)
 
-	// Check if file already exists and validate its size
-	if stat, err := os.Stat(fullOutputPath); err == nil {
-		// Check if file size is reasonable (>1KB to avoid corrupted files like 48-byte ones)
-		if stat.Size() > 1024 {
-			go func() {
-				defer close(resultCh)
-				defer close(errCh)
-				resultCh <- fullOutputPath
-			}()
-			return resultCh, errCh
-		} else {
-			// File is corrupted (too small), remove it and regenerate
-			log.Printf("Found corrupted file (size: %d bytes), removing: %s", stat.Size(), fullOutputPath)
-			os.Remove(fullOutputPath)
-		}
+	// Check if file already exists
+	if _, err := os.Stat(fullOutputPath); err == nil {
+		go func() {
+			defer close(resultCh)
+			defer close(errCh)
+			resultCh <- fullOutputPath
+		}()
+		return resultCh, errCh
 	}
 
 	go func() {

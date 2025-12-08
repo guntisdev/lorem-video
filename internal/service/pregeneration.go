@@ -92,35 +92,6 @@ func (s *PregenerationService) PregenerateVideos(ctx context.Context, inputPath 
 	return generatedFiles, nil
 }
 
-// FindExistingVideo searches for an existing video file with the given filename
-// Returns the full path if found, empty string if not found
-func (s *PregenerationService) FindExistingVideo(filename string) string {
-	sourceFiles, err := config.GetSourceVideoFiles()
-	if err != nil {
-		log.Printf("Warning: failed to get source video files: %v", err)
-		return ""
-	}
-
-	// Search in pregenerated videos (each source has its own folder)
-	for _, sourceFile := range sourceFiles {
-		filenameNoExt := strings.TrimSuffix(filepath.Base(sourceFile), filepath.Ext(sourceFile))
-		pregeneratedDir := filepath.Join(config.AppPaths.Video, filenameNoExt)
-		pregeneratedPath := filepath.Join(pregeneratedDir, filename)
-
-		if _, err := os.Stat(pregeneratedPath); err == nil {
-			return pregeneratedPath
-		}
-	}
-
-	// Search in tmp folder
-	tmpPath := filepath.Join(config.AppPaths.Tmp, filename)
-	if _, err := os.Stat(tmpPath); err == nil {
-		return tmpPath
-	}
-
-	return ""
-}
-
 func (s *PregenerationService) GetDefaultSourceVideo() string {
 	return config.AppPaths.DefaultSourceVideo
 }
