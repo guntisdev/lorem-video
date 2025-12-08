@@ -136,42 +136,34 @@ func GenerateFilename(spec *config.VideoSpec) string {
 		parts = append(parts, spec.Name)
 	}
 
-	// Add video codec if specified
 	if spec.Codec != "" {
 		parts = append(parts, spec.Codec)
 	}
 
-	// Add resolution (only if we have actual video, not novideo)
 	if spec.Width > 0 && spec.Height > 0 && spec.Codec != "novideo" {
 		parts = append(parts, fmt.Sprintf("%dx%d", spec.Width, spec.Height))
 	}
 
-	// Add FPS if specified (only if we have actual video, not novideo)
 	if spec.FPS > 0 && spec.Codec != "novideo" {
 		parts = append(parts, fmt.Sprintf("%dfps", spec.FPS))
 	}
 
-	// Add duration if specified
 	if spec.Duration > 0 {
 		parts = append(parts, fmt.Sprintf("%ds", spec.Duration))
 	}
 
-	// Add bitrate if specified (only if we have actual video, not novideo)
 	if spec.Bitrate != "" && spec.Codec != "novideo" {
 		parts = append(parts, spec.Bitrate)
 	}
 
-	// Add audio codec if specified
 	if spec.AudioCodec != "" {
 		parts = append(parts, spec.AudioCodec)
 	}
 
-	// Add audio bitrate if specified and audio codec is not "noaudio"
 	if spec.AudioBitrate > 0 && spec.AudioCodec != "noaudio" {
 		parts = append(parts, fmt.Sprintf("%dkbps", spec.AudioBitrate))
 	}
 
-	// Join parts with underscore
 	filename := strings.Join(parts, "_")
 
 	// Add container extension if specified
