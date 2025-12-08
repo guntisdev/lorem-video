@@ -30,51 +30,6 @@ func (s *VideoService) StartupPregeneration() {
 	s.pregenService.StartupPregeneration()
 }
 
-// GetOrGenerate is the universal method that ensures a video exists for given parameters
-// It searches for existing videos first, then generates if not found
-func (s *VideoService) GetOrGenerate(ctx context.Context, paramsStr string) (<-chan string, <-chan error) {
-	resultCh := make(chan string, 1)
-	errCh := make(chan error, 1)
-
-	inputParams, err := parser.ParseFilename(paramsStr)
-	if err != nil {
-		go func() {
-			defer close(errCh)
-			defer close(resultCh)
-			errCh <- fmt.Errorf("failed to parse filename parameters: %w", err)
-		}()
-		return resultCh, errCh
-	}
-
-	spec := config.ApplyDefaultVideoSpec(inputParams)
-	filename := parser.GenerateFilename(&spec)
-
-	existingPath := parser.FindExistingVideo(filename, &spec)
-	if existingPath != "" {
-		go func() {
-			defer close(resultCh)
-			defer close(errCh)
-			resultCh <- existingPath
-		}()
-		return resultCh, errCh
-	}
-
-	// TODO harcdoded .mp4 extension for source video. should be improved later
-	inputPath := filepath.Join(config.AppPaths.SourceVideo, spec.Name+".mp4")
-	if _, err := os.Stat(inputPath); err != nil {
-		go func() {
-			defer close(errCh)
-			defer close(resultCh)
-			errCh <- fmt.Errorf("failed to find source video: %s", spec.Name)
-		}()
-		return resultCh, errCh
-	}
-
-	log.Printf("Video not found, generating: %s", filename)
-
-	return s.Transcode(ctx, spec, inputPath, config.AppPaths.Tmp)
-}
-
 // TranscodeFromParams parses parameters and calls Transcode with appropriate paths
 func (s *VideoService) TranscodeFromParams(ctx context.Context, paramsStr string) (<-chan string, <-chan error) {
 	inputParams, err := parser.ParseFilename(paramsStr)
