@@ -1,3 +1,9 @@
+{
+    log {
+        level WARN
+    }
+}
+
 lorem.video {
     reverse_proxy app:3000
 }
