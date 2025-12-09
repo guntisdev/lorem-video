@@ -13,13 +13,13 @@
   <defs
      id="defs3" />
   <path
-     opacity=".6"
+     opacity="0.6"
      fill-rule="evenodd"
      clip-rule="evenodd"
      d="m 3,2.0000001 h 18 a 1,1 0 0 1 1,1 v 1 H 2 v -1 a 1,1 0 0 1 1,-1 z"
      fill="#000000"
      id="path1"
-     style="opacity:1;fill:#3b82f6;fill-opacity:1" />
+     style="fill:#3b82f6;fill-opacity:1" />
   <path
      opacity="0.3"
      fill-rule="evenodd"
@@ -27,12 +27,12 @@
      d="M 5,1.3529932e-7 H 19 A 1,1 0 0 1 20,1.0000001 v 1 H 4 v -1 A 1,1 0 0 1 5,1.3529932e-7 Z"
      fill="#000000"
      id="path2"
-     style="display:inline;opacity:1;fill:#1e3a8a;fill-opacity:1" />
+     style="display:inline;opacity:0.399586;fill:#93c5fd;fill-opacity:1" />
   <path
      fill-rule="evenodd"
      clip-rule="evenodd"
      d="m 1,4.0000001 h 22 a 1,1 0 0 1 1,1 V 20 a 1,1 0 0 1 -1,1 H 1 A 1,1 0 0 1 0,20 V 5.0000001 a 1,1 0 0 1 1,-1 z m 0,2 v 3 h 3 v -3 z M 1,11 v 3 h 3 v -3 z m 0,5 v 3 H 4 V 16 Z M 20,6.0000001 v 3 h 3 v -3 z M 20,11 v 3 h 3 v -3 z m 0,5 v 3 h 3 v -3 z"
      fill="#000000"
      id="path3"
-     style="mix-blend-mode:normal;fill:#93c5fd;fill-opacity:1" />
+     style="mix-blend-mode:normal;fill:#223c86;fill-opacity:1" />
 </svg>
