@@ -7,6 +7,7 @@ import (
 	"lorem.video/internal/config"
 	"lorem.video/internal/rest"
 	"lorem.video/internal/service"
+	"lorem.video/internal/stats"
 )
 
 func main() {
@@ -30,7 +31,7 @@ func main() {
 	mux.HandleFunc("GET /transcode/{params}", rest.Transcode)
 	mux.HandleFunc("GET /{params}", rest.ServeVideo)
 
-	handler := rest.StatsMiddleware(rest.CORSMiddleware(mux))
+	handler := stats.StatsMiddleware(rest.CORSMiddleware(mux))
 
 	port := "3000"
 
