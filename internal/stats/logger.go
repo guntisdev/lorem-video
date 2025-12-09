@@ -1,4 +1,4 @@
-package rest
+package stats
 
 import (
 	"bufio"
@@ -96,7 +96,7 @@ func (rw *responseWriter) Write(b []byte) (int, error) {
 	return n, err
 }
 
-func (rest *Rest) StatsMiddleware(next http.Handler) http.Handler {
+func StatsMiddleware(next http.Handler) http.Handler {
 	logger, err := NewStatsLogger()
 	if err != nil {
 		fmt.Printf("Warning: Failed to create stats logger: %v\n", err)
