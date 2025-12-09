@@ -1,7 +1,5 @@
 lorem.video {
-    reverse_proxy app:3000 {
-        timeout 10m
-    }
+    reverse_proxy app:3000
 }
 
 www.lorem.video {
