@@ -7,7 +7,6 @@ import (
 	"net/url"
 	"os"
 	"path/filepath"
-	"regexp"
 	"sort"
 	"strings"
 	"time"
@@ -32,6 +31,7 @@ type EndpointStat struct {
 type VisitorStat struct {
 	IP        string
 	UserAgent string
+	Browser   string // Detected browser/bot name
 	Requests  int
 	Bytes     int64
 	FirstSeen time.Time
@@ -69,13 +69,6 @@ type AnalysisResult struct {
 	StaticRequests  int
 	PartialRequests int
 	ErrorRequests   int
-}
-
-var botPatterns = []*regexp.Regexp{
-	regexp.MustCompile(`(?i)bot|crawler|spider|scraper`),
-	regexp.MustCompile(`(?i)googlebot|bingbot|slurp|duckduckbot`),
-	regexp.MustCompile(`(?i)facebookexternalhit|twitterbot|linkedinbot`),
-	regexp.MustCompile(`(?i)curl|wget|python|go-http`),
 }
 
 func AnalyzeStats(analyzerConfig AnalyzerConfig) (*AnalysisResult, error) {
@@ -225,6 +218,7 @@ func processLogFile(filename string, config AnalyzerConfig, result *AnalysisResu
 			visitors[visitorKey] = &VisitorStat{
 				IP:        stat.IP,
 				UserAgent: stat.UserAgent,
+				Browser:   ExtractBrowserName(stat.UserAgent),
 				Requests:  1,
 				Bytes:     stat.ResponseSize,
 				FirstSeen: stat.Timestamp,
@@ -301,6 +295,22 @@ func extractDomain(referrer string) string {
 		return referrer
 	}
 	return u.Host
+}
+
+func ExtractBrowserName(uaString string) string {
+	ua := useragent.Parse(uaString)
+	if ua.Name != "" {
+		return ua.Name
+	}
+
+	return "Other"
+}
+
+func ExtractBotName(uaString string) string {
+	if len(uaString) > 57 {
+		uaString = uaString[:54] + "..."
+	}
+	return uaString
 }
 
 func isBot(uaString string) bool {

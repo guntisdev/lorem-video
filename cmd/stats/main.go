@@ -9,7 +9,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/mileusna/useragent"
 	"lorem.video/internal/stats"
 )
 
@@ -81,13 +80,17 @@ func printResults(result *stats.AnalysisResult, topN int, showFullUA bool) {
 	if len(result.TopVisitors) > 0 {
 		fmt.Printf("👥 TOP VISITORS (Top %d)\n", topN)
 		fmt.Printf("═══════════════════════════════════════\n")
-		fmt.Printf("%-15s %10s %12s\n", "IP", "Requests", "Bytes")
-		fmt.Printf("%-15s %10s %12s\n", strings.Repeat("-", 15), strings.Repeat("-", 10), strings.Repeat("-", 12))
+		fmt.Printf("%-15s %-15s %10s %12s\n", "IP", "Browser", "Requests", "Bytes")
+		fmt.Printf("%-15s %-15s %10s %12s\n", strings.Repeat("-", 15), strings.Repeat("-", 15), strings.Repeat("-", 10), strings.Repeat("-", 12))
 		for i, visitor := range result.TopVisitors {
 			if i >= topN {
 				break
 			}
-			fmt.Printf("%-15s %10d %12s\n", visitor.IP, visitor.Requests, formatBytes(visitor.Bytes))
+			browser := visitor.Browser
+			if len(browser) > 12 {
+				browser = browser[:9] + "..."
+			}
+			fmt.Printf("%-15s %-15s %10d %12s\n", visitor.IP, browser, visitor.Requests, formatBytes(visitor.Bytes))
 		}
 		fmt.Printf("\n")
 	}
@@ -152,10 +155,7 @@ func printResults(result *stats.AnalysisResult, topN int, showFullUA bool) {
 			if i >= topN {
 				break
 			}
-			name := bot.UserAgent
-			if len(name) > 57 {
-				name = name[:54] + "..."
-			}
+			name := stats.ExtractBotName(bot.UserAgent)
 			fmt.Printf("%-60s %10d\n", name, bot.Count)
 		}
 		fmt.Printf("\n")
@@ -185,7 +185,7 @@ func summarizeBrowsers(userAgents []stats.UserAgentStat) []BrowserSummary {
 	browsers := make(map[string]int)
 
 	for _, ua := range userAgents {
-		browser := detectBrowser(ua.UserAgent)
+		browser := stats.ExtractBrowserName(ua.UserAgent)
 		browsers[browser] += ua.Count
 	}
 
@@ -200,15 +200,6 @@ func summarizeBrowsers(userAgents []stats.UserAgentStat) []BrowserSummary {
 	})
 
 	return result
-}
-
-func detectBrowser(uaString string) string {
-	ua := useragent.Parse(uaString)
-	if ua.Name != "" {
-		return ua.Name
-	}
-
-	return "Other"
 }
 
 func formatNumber(n int) string {
