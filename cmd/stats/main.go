@@ -6,15 +6,19 @@ import (
 	"os"
 	"strconv"
 	"strings"
+	"time"
 
 	"lorem.video/internal/stats"
 )
 
 func main() {
+	// Default to last 7 days
+	defaultMinDate := time.Now().AddDate(0, 0, -7).Format("2006-01-02")
+
 	var (
 		excludeStatic  = flag.Bool("exclude-static", true, "Exclude /web/... paths")
 		excludePartial = flag.Bool("exclude-partial", true, "Exclude partial content (206 responses)")
-		minDate        = flag.String("min-date", "", "Minimum date YYYY-MM-DD (empty for all)")
+		minDate        = flag.String("min-date", defaultMinDate, "Minimum date YYYY-MM-DD (default: 7 days ago)")
 		maxDate        = flag.String("max-date", "", "Maximum date YYYY-MM-DD (empty for all)")
 		topN           = flag.Int("top", 20, "Number of top results to show")
 		showFullUA     = flag.Bool("full-ua", false, "Show full user agent strings")
