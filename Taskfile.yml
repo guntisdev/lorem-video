@@ -11,6 +11,11 @@ tasks:
     cmds:
       - go build -o bin/server ./cmd/server
 
+  build:stats:
+    desc: Build stats analyzer binary
+    cmds:
+      - go build -o bin/stats ./cmd/stats
+
   test:
     desc: Test all packages
     cmds:
