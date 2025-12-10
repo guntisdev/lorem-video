@@ -12,6 +12,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/mileusna/useragent"
 	"lorem.video/internal/config"
 )
 
@@ -302,13 +303,9 @@ func extractDomain(referrer string) string {
 	return u.Host
 }
 
-func isBot(userAgent string) bool {
-	for _, pattern := range botPatterns {
-		if pattern.MatchString(userAgent) {
-			return true
-		}
-	}
-	return false
+func isBot(uaString string) bool {
+	ua := useragent.Parse(uaString)
+	return ua.Bot
 }
 
 func sortEndpoints(endpoints map[string]*EndpointStat) []EndpointStat {

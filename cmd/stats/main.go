@@ -4,10 +4,12 @@ import (
 	"flag"
 	"fmt"
 	"os"
+	"sort"
 	"strconv"
 	"strings"
 	"time"
 
+	"github.com/mileusna/useragent"
 	"lorem.video/internal/stats"
 )
 
@@ -44,7 +46,8 @@ func main() {
 }
 
 func printResults(result *stats.AnalysisResult, topN int, showFullUA bool) {
-	// Overview
+	fmt.Printf("+++++++++++++++++++++++++++++++++++++++++++++++++++++++\n")
+	fmt.Printf("+++++++++++++++++++++++++++++++++++++++++++++++++++++++\n")
 	fmt.Printf("📊 OVERVIEW\n")
 	fmt.Printf("═══════════════════════════════════════\n")
 	fmt.Printf("Date Range:         %s\n", result.DateRange)
@@ -57,7 +60,6 @@ func printResults(result *stats.AnalysisResult, topN int, showFullUA bool) {
 	fmt.Printf("Error Requests:     %s\n", formatNumber(result.ErrorRequests))
 	fmt.Printf("\n")
 
-	// Top Endpoints
 	if len(result.TopEndpoints) > 0 {
 		fmt.Printf("🎯 TOP ENDPOINTS (Top %d)\n", topN)
 		fmt.Printf("═══════════════════════════════════════\n")
@@ -76,7 +78,6 @@ func printResults(result *stats.AnalysisResult, topN int, showFullUA bool) {
 		fmt.Printf("\n")
 	}
 
-	// Top Visitors
 	if len(result.TopVisitors) > 0 {
 		fmt.Printf("👥 TOP VISITORS (Top %d)\n", topN)
 		fmt.Printf("═══════════════════════════════════════\n")
@@ -91,7 +92,6 @@ func printResults(result *stats.AnalysisResult, topN int, showFullUA bool) {
 		fmt.Printf("\n")
 	}
 
-	// Top Referrers
 	if len(result.TopReferrers) > 0 {
 		fmt.Printf("🔗 TOP REFERRER DOMAINS (Top %d)\n", topN)
 		fmt.Printf("═══════════════════════════════════════\n")
@@ -110,7 +110,6 @@ func printResults(result *stats.AnalysisResult, topN int, showFullUA bool) {
 		fmt.Printf("\n")
 	}
 
-	// Full Referrer URLs
 	if len(result.FullReferrerURLs) > 0 {
 		fmt.Printf("📄 FULL REFERRER URLS (Top %d)\n", topN)
 		fmt.Printf("═══════════════════════════════════════\n")
@@ -129,7 +128,6 @@ func printResults(result *stats.AnalysisResult, topN int, showFullUA bool) {
 		fmt.Printf("\n")
 	}
 
-	// Browser summary
 	if len(result.UserAgents) > 0 {
 		browsers := summarizeBrowsers(result.UserAgents)
 		fmt.Printf("🌐 BROWSER SUMMARY (Top %d)\n", topN)
@@ -145,7 +143,6 @@ func printResults(result *stats.AnalysisResult, topN int, showFullUA bool) {
 		fmt.Printf("\n")
 	}
 
-	// Bots and Crawlers
 	if len(result.Bots) > 0 {
 		fmt.Printf("🤖 BOTS & CRAWLERS (Top %d)\n", topN)
 		fmt.Printf("═══════════════════════════════════════\n")
@@ -164,7 +161,6 @@ func printResults(result *stats.AnalysisResult, topN int, showFullUA bool) {
 		fmt.Printf("\n")
 	}
 
-	// Rate limiting insights
 	fmt.Printf("🚦 RATE LIMITING INSIGHTS\n")
 	fmt.Printf("═══════════════════════════════════════\n")
 	heavyUsers := 0
@@ -198,47 +194,18 @@ func summarizeBrowsers(userAgents []stats.UserAgentStat) []BrowserSummary {
 		result = append(result, BrowserSummary{Name: name, Count: count})
 	}
 
-	// Sort by count
-	for i := 0; i < len(result)-1; i++ {
-		for j := i + 1; j < len(result); j++ {
-			if result[j].Count > result[i].Count {
-				result[i], result[j] = result[j], result[i]
-			}
-		}
-	}
+	// Sort by count (descending)
+	sort.Slice(result, func(i, j int) bool {
+		return result[i].Count > result[j].Count
+	})
 
 	return result
 }
 
-func detectBrowser(ua string) string {
-	ua = strings.ToLower(ua)
-
-	if strings.Contains(ua, "chrome") && !strings.Contains(ua, "edg") {
-		return "Chrome"
-	}
-	if strings.Contains(ua, "firefox") {
-		return "Firefox"
-	}
-	if strings.Contains(ua, "safari") && !strings.Contains(ua, "chrome") {
-		return "Safari"
-	}
-	if strings.Contains(ua, "edg") {
-		return "Edge"
-	}
-	if strings.Contains(ua, "opera") {
-		return "Opera"
-	}
-	if strings.Contains(ua, "curl") {
-		return "cURL"
-	}
-	if strings.Contains(ua, "wget") {
-		return "wget"
-	}
-	if strings.Contains(ua, "python") {
-		return "Python"
-	}
-	if strings.Contains(ua, "go-http") {
-		return "Go HTTP Client"
+func detectBrowser(uaString string) string {
+	ua := useragent.Parse(uaString)
+	if ua.Name != "" {
+		return ua.Name
 	}
 
 	return "Other"
