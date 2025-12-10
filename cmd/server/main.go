@@ -26,6 +26,8 @@ func main() {
 	mux := http.NewServeMux()
 
 	mux.HandleFunc("GET /", rest.ServeDocumentation)
+	mux.HandleFunc("GET /sitemap.xml", rest.ServeSitemap)
+	mux.HandleFunc("GET /robots.txt", rest.ServeRobots)
 	mux.HandleFunc("GET /web/{path...}", rest.ServeStaticFiles)
 	mux.HandleFunc("GET /getInfo/{name}", rest.GetVideoInfo)
 	mux.HandleFunc("GET /transcode/{params}", rest.Transcode)

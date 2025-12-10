@@ -42,6 +42,18 @@ func (rest *Rest) ServeStaticFiles(w http.ResponseWriter, r *http.Request) {
 	fs.ServeHTTP(w, r)
 }
 
+func (rest *Rest) ServeSitemap(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/xml; charset=utf-8")
+	w.Header().Set("Cache-Control", "public, max-age=3600") // 1 hour cache
+	http.ServeFile(w, r, "web/dist/sitemap.xml")
+}
+
+func (rest *Rest) ServeRobots(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "text/plain; charset=utf-8")
+	w.Header().Set("Cache-Control", "public, max-age=3600") // 1 hour cache
+	http.ServeFile(w, r, "web/dist/robots.txt")
+}
+
 func (rest *Rest) GetVideoInfo(w http.ResponseWriter, r *http.Request) {
 	name := r.PathValue("name")
 	info, err := rest.videoService.GetInfo(name)
