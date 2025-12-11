@@ -18,6 +18,7 @@ import (
 type AnalyzerConfig struct {
 	ExcludeStaticPaths bool   // Filter out /web/... paths
 	ExcludePartial     bool   // Filter out partial content (206 status)
+	ExcludeReferer     string // Filter out referrers containing this domain
 	MinDate            string // YYYY-MM-DD format, empty for all
 	MaxDate            string // YYYY-MM-DD format, empty for all
 }
@@ -180,6 +181,12 @@ func processLogFile(filename string, config AnalyzerConfig, result *AnalysisResu
 		}
 		if config.ExcludePartial && stat.Status == 206 {
 			continue
+		}
+		if config.ExcludeReferer != "" && stat.Referer != "" {
+			referrerDomain := extractDomain(stat.Referer)
+			if strings.Contains(referrerDomain, config.ExcludeReferer) {
+				continue
+			}
 		}
 
 		// Track date range
