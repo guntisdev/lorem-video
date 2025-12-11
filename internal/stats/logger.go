@@ -29,29 +29,46 @@ type RequestStats struct {
 }
 
 type StatsLogger struct {
-	logFile *os.File
-	writer  *bufio.Writer
-	mutex   sync.Mutex
+	logFile     *os.File
+	writer      *bufio.Writer
+	currentDate string // Track current date for file rotation
+	mutex       sync.Mutex
 }
 
 func NewStatsLogger() (*StatsLogger, error) {
-	logDir := config.AppPaths.Logs
-	logPath := filepath.Join(logDir, fmt.Sprintf("stats-%s.jsonl", time.Now().Format("2006-01-02")))
-
-	file, err := os.OpenFile(logPath, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0644)
-	if err != nil {
-		return nil, fmt.Errorf("failed to open log file: %w", err)
-	}
-
 	return &StatsLogger{
-		logFile: file,
-		writer:  bufio.NewWriter(file),
+		logFile:     nil,
+		writer:      nil,
+		currentDate: "", // Empty means no file opened yet
 	}, nil
 }
 
 func (sl *StatsLogger) Log(stats RequestStats) error {
 	sl.mutex.Lock()
 	defer sl.mutex.Unlock()
+
+	// Check if we need to open/rotate to the correct daily log file
+	currentDate := stats.Timestamp.Format("2006-01-02")
+	if currentDate != sl.currentDate {
+		// Close current file if open
+		if sl.writer != nil {
+			sl.writer.Flush()
+		}
+		if sl.logFile != nil {
+			sl.logFile.Close()
+		}
+
+		// Open file for today
+		logPath := filepath.Join(config.AppPaths.Logs, fmt.Sprintf("stats-%s.jsonl", currentDate))
+		file, err := os.OpenFile(logPath, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0644)
+		if err != nil {
+			return fmt.Errorf("failed to open log file: %w", err)
+		}
+
+		sl.logFile = file
+		sl.writer = bufio.NewWriter(file)
+		sl.currentDate = currentDate
+	}
 
 	data, err := json.Marshal(stats)
 	if err != nil {
