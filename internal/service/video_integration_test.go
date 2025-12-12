@@ -21,7 +21,7 @@ import (
 // Integration tests for video transcoding - these are slow and require FFmpeg
 // Run with: go test -tags=integration ./internal/service
 
-func TestGetOrGenerateIntegration(t *testing.T) {
+func TestTranscodeFromParamsIntegration(t *testing.T) {
 	// Skip if FFmpeg is not available
 	if _, err := exec.LookPath("ffmpeg"); err != nil {
 		t.Skip("FFmpeg not found, skipping integration test")
@@ -46,7 +46,7 @@ func TestGetOrGenerateIntegration(t *testing.T) {
 		DefaultSourceVideo: filepath.Join(tempDir, "sourceVideo", "bunny.mp4"),
 	}
 
-	// Create directories manually for testing (without validation)
+	// Create directories manually for testing
 	dirs := []string{
 		config.AppPaths.Data,
 		config.AppPaths.SourceVideo,
@@ -66,32 +66,25 @@ func TestGetOrGenerateIntegration(t *testing.T) {
 	// Create a simple test video as source
 	createTestVideo(t, config.AppPaths.DefaultSourceVideo, 2, 640, 360)
 
-	// Now validate that everything is properly set up
-	if err := config.EnsureDirectories(); err != nil {
-		t.Fatalf("Failed to validate directories: %v", err)
-	}
-
-	// Create bunny subdirectory for pregenerated videos
-	bunnyDir := filepath.Join(config.AppPaths.Video, "bunny")
-	if err := os.MkdirAll(bunnyDir, 0755); err != nil {
-		t.Fatalf("Failed to create bunny directory: %v", err)
-	}
+	// Set up mock source files for testing
+	parser.SetMockSourceFiles([]string{"bunny"})
+	defer parser.ClearMockSourceFiles()
 
 	service := NewVideoService()
 
-	t.Run("Generate new video when not found", func(t *testing.T) {
+	t.Run("Transcode from params - new video", func(t *testing.T) {
 		ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 		defer cancel()
 
 		params := "bunny_h264_720p_30fps_2s_25crf_aac_96kbps.mp4"
-		resultCh, errCh := service.GetOrGenerate(ctx, params)
+		resultCh, errCh := service.TranscodeFromParams(ctx, params)
 
 		select {
 		case result := <-resultCh:
-			// Should be in tmp directory since it's newly generated
-			expectedPrefix := config.AppPaths.Tmp
+			// Should be in video directory
+			expectedPrefix := config.AppPaths.Video
 			if !strings.HasPrefix(result, expectedPrefix) {
-				t.Errorf("Expected result to be in tmp dir (%s), got: %s", expectedPrefix, result)
+				t.Errorf("Expected result to be in video dir (%s), got: %s", expectedPrefix, result)
 			}
 
 			// Verify file exists and has content
@@ -103,74 +96,187 @@ func TestGetOrGenerateIntegration(t *testing.T) {
 				t.Fatal("Output file is empty")
 			}
 
-			t.Logf("✅ New video generated: %s (size: %d bytes)", result, info.Size())
+			t.Logf("✅ New video transcoded: %s (size: %d bytes)", result, info.Size())
 
 		case err := <-errCh:
-			t.Fatalf("GetOrGenerate failed: %v", err)
+			t.Fatalf("TranscodeFromParams failed: %v", err)
 
 		case <-ctx.Done():
-			t.Fatal("GetOrGenerate timed out")
+			t.Fatal("TranscodeFromParams timed out")
 		}
 	})
 
-	t.Run("Find existing video in pregenerated folder", func(t *testing.T) {
+	t.Run("Transcode from params - existing video", func(t *testing.T) {
 		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 		defer cancel()
 
-		// First, create a pregenerated video
+		// First, create the expected output file
 		params := "bunny_h264_480p_30fps_2s_23crf_aac_128kbps.mp4"
-		filename := "bunny_h264_854x480_30fps_2s_23crf_aac_128kbps.mp4"
-		pregeneratedPath := filepath.Join(bunnyDir, filename)
+		inputParams, err := parser.ParseFilename(params)
+		if err != nil {
+			t.Fatalf("Failed to parse params: %v", err)
+		}
+		spec := config.ApplyDefaultVideoSpec(inputParams)
+		filename := parser.GenerateFilename(&spec)
+		existingPath := filepath.Join(config.AppPaths.Video, filename)
 
-		// Create the pregenerated video
-		createTestVideo(t, pregeneratedPath, 2, 854, 480)
+		createTestVideo(t, existingPath, 2, 854, 480)
 
-		// Now test GetOrGenerate finds it
-		resultCh, errCh := service.GetOrGenerate(ctx, params)
+		// Now test TranscodeFromParams finds existing file
+		resultCh, errCh := service.TranscodeFromParams(ctx, params)
 
 		select {
 		case result := <-resultCh:
-			if result != pregeneratedPath {
-				t.Errorf("Expected to find pregenerated video at %s, got: %s", pregeneratedPath, result)
+			if result != existingPath {
+				t.Errorf("Expected to find existing video at %s, got: %s", existingPath, result)
 			}
-			t.Logf("✅ Found existing pregenerated video: %s", result)
+			t.Logf("✅ Found existing video: %s", result)
 
 		case err := <-errCh:
-			t.Fatalf("GetOrGenerate failed: %v", err)
+			t.Fatalf("TranscodeFromParams failed: %v", err)
 
 		case <-ctx.Done():
-			t.Fatal("GetOrGenerate timed out")
+			t.Fatal("TranscodeFromParams timed out")
 		}
+	})
+}
+
+func TestFindExistingVideoIntegration(t *testing.T) {
+	// Create temporary test directory structure
+	tempDir := t.TempDir()
+
+	// Set up temporary config paths for testing
+	oldAppPaths := config.AppPaths
+	defer func() { config.AppPaths = oldAppPaths }()
+
+	config.AppPaths = &config.Paths{
+		Data:               tempDir,
+		Video:              filepath.Join(tempDir, "video"),
+		SourceVideo:        filepath.Join(tempDir, "sourceVideo"),
+		Logs:               filepath.Join(tempDir, "logs"),
+		LogsStats:          filepath.Join(tempDir, "logs", "stats"),
+		LogsBots:           filepath.Join(tempDir, "logs", "bots"),
+		LogsErrors:         filepath.Join(tempDir, "logs", "errors"),
+		Tmp:                filepath.Join(tempDir, "tmp"),
+		DefaultSourceVideo: filepath.Join(tempDir, "sourceVideo", "bunny.mp4"),
+	}
+
+	// Create directories manually for testing
+	dirs := []string{
+		config.AppPaths.Data,
+		config.AppPaths.SourceVideo,
+		config.AppPaths.Video,
+		config.AppPaths.Logs,
+		config.AppPaths.LogsStats,
+		config.AppPaths.LogsBots,
+		config.AppPaths.LogsErrors,
+		config.AppPaths.Tmp,
+	}
+	for _, dir := range dirs {
+		if err := os.MkdirAll(dir, 0755); err != nil {
+			t.Fatalf("Failed to create directory %s: %v", dir, err)
+		}
+	}
+
+	// Create bunny subdirectory for pregenerated videos
+	bunnyDir := filepath.Join(config.AppPaths.Video, "bunny")
+	if err := os.MkdirAll(bunnyDir, 0755); err != nil {
+		t.Fatalf("Failed to create bunny directory: %v", err)
+	}
+
+	// Set up mock source files for testing
+	parser.SetMockSourceFiles([]string{"bunny"})
+	defer parser.ClearMockSourceFiles()
+
+	t.Run("Find existing video in pregenerated folder", func(t *testing.T) {
+		// Parse params to get VideoSpec
+		params := "bunny_h264_480p_30fps_2s_23crf_aac_128kbps.mp4"
+		inputParams, err := parser.ParseFilename(params)
+		if err != nil {
+			t.Fatalf("Failed to parse params: %v", err)
+		}
+		spec := config.ApplyDefaultVideoSpec(inputParams)
+		filename := parser.GenerateFilename(&spec)
+
+		// Create a pregenerated video
+		pregeneratedPath := filepath.Join(bunnyDir, filename)
+		createTestVideo(t, pregeneratedPath, 2, 854, 480)
+
+		// Test FindExistingVideo finds it
+		result := parser.FindExistingVideo(filename, &spec)
+		if result != pregeneratedPath {
+			t.Errorf("Expected to find pregenerated video at %s, got: %s", pregeneratedPath, result)
+		}
+		t.Logf("✅ Found existing pregenerated video: %s", result)
 	})
 
 	t.Run("Find existing video in tmp folder", func(t *testing.T) {
-		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-		defer cancel()
-
-		// First, create a video in tmp folder
+		// Parse params to get VideoSpec
 		params := "bunny_vp9_720p_30fps_2s_30crf_opus_128kbps.webm"
-		filename := "bunny_vp9_1280x720_30fps_2s_30crf_opus_128kbps.webm"
-		tmpPath := filepath.Join(config.AppPaths.Tmp, filename)
+		inputParams, err := parser.ParseFilename(params)
+		if err != nil {
+			t.Fatalf("Failed to parse params: %v", err)
+		}
+		spec := config.ApplyDefaultVideoSpec(inputParams)
+		filename := parser.GenerateFilename(&spec)
 
-		// Create the tmp video
+		// Create a video in tmp folder
+		tmpPath := filepath.Join(config.AppPaths.Tmp, filename)
 		createTestVideo(t, tmpPath, 2, 1280, 720)
 
-		// Now test GetOrGenerate finds it
-		resultCh, errCh := service.GetOrGenerate(ctx, params)
-
-		select {
-		case result := <-resultCh:
-			if result != tmpPath {
-				t.Errorf("Expected to find tmp video at %s, got: %s", tmpPath, result)
-			}
-			t.Logf("✅ Found existing tmp video: %s", result)
-
-		case err := <-errCh:
-			t.Fatalf("GetOrGenerate failed: %v", err)
-
-		case <-ctx.Done():
-			t.Fatal("GetOrGenerate timed out")
+		// Test FindExistingVideo finds it
+		result := parser.FindExistingVideo(filename, &spec)
+		if result != tmpPath {
+			t.Errorf("Expected to find tmp video at %s, got: %s", tmpPath, result)
 		}
+		t.Logf("✅ Found existing tmp video: %s", result)
+	})
+
+	t.Run("Return empty when video not found", func(t *testing.T) {
+		// Parse params to get VideoSpec
+		params := "bunny_h265_1080p_60fps_5s_28crf_aac_192kbps.mp4"
+		inputParams, err := parser.ParseFilename(params)
+		if err != nil {
+			t.Fatalf("Failed to parse params: %v", err)
+		}
+		spec := config.ApplyDefaultVideoSpec(inputParams)
+		filename := parser.GenerateFilename(&spec)
+
+		// Test FindExistingVideo returns empty
+		result := parser.FindExistingVideo(filename, &spec)
+		if result != "" {
+			t.Errorf("Expected empty result for non-existent video, got: %s", result)
+		}
+		t.Logf("✅ Correctly returned empty for non-existent video")
+	})
+
+	t.Run("Remove corrupted small file from tmp", func(t *testing.T) {
+		// Parse params to get VideoSpec
+		params := "bunny_h264_720p_30fps_2s_25crf_aac_128kbps.mp4"
+		inputParams, err := parser.ParseFilename(params)
+		if err != nil {
+			t.Fatalf("Failed to parse params: %v", err)
+		}
+		spec := config.ApplyDefaultVideoSpec(inputParams)
+		filename := parser.GenerateFilename(&spec)
+
+		// Create a corrupted small file in tmp folder
+		tmpPath := filepath.Join(config.AppPaths.Tmp, filename)
+		if err := os.WriteFile(tmpPath, []byte("small"), 0644); err != nil {
+			t.Fatalf("Failed to create small file: %v", err)
+		}
+
+		// Test FindExistingVideo removes it and returns empty
+		result := parser.FindExistingVideo(filename, &spec)
+		if result != "" {
+			t.Errorf("Expected empty result for corrupted file, got: %s", result)
+		}
+
+		// Verify file was deleted
+		if _, err := os.Stat(tmpPath); !os.IsNotExist(err) {
+			t.Errorf("Expected corrupted file to be deleted")
+		}
+		t.Logf("✅ Correctly removed corrupted small file")
 	})
 }
 
