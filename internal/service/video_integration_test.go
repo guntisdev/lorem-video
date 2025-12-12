@@ -39,6 +39,9 @@ func TestGetOrGenerateIntegration(t *testing.T) {
 		Video:              filepath.Join(tempDir, "video"),
 		SourceVideo:        filepath.Join(tempDir, "sourceVideo"),
 		Logs:               filepath.Join(tempDir, "logs"),
+		LogsStats:          filepath.Join(tempDir, "logs", "stats"),
+		LogsBots:           filepath.Join(tempDir, "logs", "bots"),
+		LogsErrors:         filepath.Join(tempDir, "logs", "errors"),
 		Tmp:                filepath.Join(tempDir, "tmp"),
 		DefaultSourceVideo: filepath.Join(tempDir, "sourceVideo", "bunny.mp4"),
 	}
@@ -49,6 +52,9 @@ func TestGetOrGenerateIntegration(t *testing.T) {
 		config.AppPaths.SourceVideo,
 		config.AppPaths.Video,
 		config.AppPaths.Logs,
+		config.AppPaths.LogsStats,
+		config.AppPaths.LogsBots,
+		config.AppPaths.LogsErrors,
 		config.AppPaths.Tmp,
 	}
 	for _, dir := range dirs {

@@ -19,7 +19,7 @@ func logError(msg string) {
 
 	// Also write to error log file
 	date := time.Now().Format("2006-01-02")
-	errorLogPath := filepath.Join(config.AppPaths.Errors, fmt.Sprintf("error-%s.log", date))
+	errorLogPath := filepath.Join(config.AppPaths.LogsErrors, fmt.Sprintf("error-%s.log", date))
 
 	errorFile, err := os.OpenFile(errorLogPath, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0666)
 	if err == nil {
