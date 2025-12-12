@@ -73,7 +73,7 @@ type AnalysisResult struct {
 }
 
 func AnalyzeStats(analyzerConfig AnalyzerConfig) (*AnalysisResult, error) {
-	logDir := config.AppPaths.Logs
+	logDir := config.AppPaths.LogsStats
 
 	// Find all log files in date range
 	files, err := findLogFiles(logDir, analyzerConfig)

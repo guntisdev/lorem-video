@@ -14,7 +14,9 @@ type Paths struct {
 	Video       string
 	SourceVideo string
 	Logs        string
-	Errors      string
+	LogsStats   string
+	LogsBots    string
+	LogsErrors  string
 	Tmp         string
 
 	// Default files
@@ -33,7 +35,9 @@ func initPaths() *Paths {
 		Video:       filepath.Join(dataDir, "video"),
 		SourceVideo: sourceVideoDir,
 		Logs:        filepath.Join(dataDir, "logs"),
-		Errors:      filepath.Join(dataDir, "errors"),
+		LogsStats:   filepath.Join(dataDir, "logs", "stats"),
+		LogsBots:    filepath.Join(dataDir, "logs", "bots"),
+		LogsErrors:  filepath.Join(dataDir, "logs", "errors"),
 		Tmp:         filepath.Join(dataDir, "tmp"),
 
 		// Default files
@@ -62,7 +66,9 @@ func EnsureDirectories() error {
 		AppPaths.SourceVideo,
 		AppPaths.Video,
 		AppPaths.Logs,
-		AppPaths.Errors,
+		AppPaths.LogsStats,
+		AppPaths.LogsBots,
+		AppPaths.LogsErrors,
 		AppPaths.Tmp,
 	}
 
