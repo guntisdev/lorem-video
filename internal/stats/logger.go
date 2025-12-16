@@ -11,8 +11,6 @@ import (
 	"strings"
 	"sync"
 	"time"
-
-	"lorem.video/internal/config"
 )
 
 type RequestStats struct {
@@ -32,14 +30,16 @@ type StatsLogger struct {
 	logFile     *os.File
 	writer      *bufio.Writer
 	currentDate string // Track current date for file rotation
+	logPath     string // Directory path for log files
 	mutex       sync.Mutex
 }
 
-func NewStatsLogger() (*StatsLogger, error) {
+func NewStatsLogger(logPath string) (*StatsLogger, error) {
 	return &StatsLogger{
 		logFile:     nil,
 		writer:      nil,
 		currentDate: "", // Empty means no file opened yet
+		logPath:     logPath,
 	}, nil
 }
 
@@ -59,7 +59,7 @@ func (sl *StatsLogger) Log(stats RequestStats) error {
 		}
 
 		// Open file for today
-		logPath := filepath.Join(config.AppPaths.LogsStats, fmt.Sprintf("stats-%s.jsonl", currentDate))
+		logPath := filepath.Join(sl.logPath, fmt.Sprintf("stats-%s.jsonl", currentDate))
 		file, err := os.OpenFile(logPath, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0644)
 		if err != nil {
 			return fmt.Errorf("failed to open log file: %w", err)
@@ -113,52 +113,54 @@ func (rw *responseWriter) Write(b []byte) (int, error) {
 	return n, err
 }
 
-func StatsMiddleware(next http.Handler) http.Handler {
-	logger, err := NewStatsLogger()
-	if err != nil {
-		fmt.Printf("Warning: Failed to create stats logger: %v\n", err)
-	}
-
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		start := time.Now()
-
-		rw := &responseWriter{
-			ResponseWriter: w,
-			statusCode:     200, // Default status code
-			bytesWritten:   0,
+func StatsMiddleware(logPath string) func(http.Handler) http.Handler {
+	return func(next http.Handler) http.Handler {
+		logger, err := NewStatsLogger(logPath)
+		if err != nil {
+			fmt.Printf("Warning: Failed to create stats logger: %v\n", err)
 		}
 
-		next.ServeHTTP(rw, r)
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			start := time.Now()
 
-		responseTime := time.Since(start).Milliseconds()
-
-		ipAddress := r.RemoteAddr
-		if forwarded := r.Header.Get("X-Forwarded-For"); forwarded != "" {
-			ipAddress = strings.Split(forwarded, ",")[0]
-		} else if realIP := r.Header.Get("X-Real-IP"); realIP != "" {
-			ipAddress = realIP
-		}
-		if host, _, err := net.SplitHostPort(ipAddress); err == nil {
-			ipAddress = host
-		}
-
-		stats := RequestStats{
-			Timestamp:    start,
-			Method:       r.Method,
-			Path:         r.URL.Path,
-			IP:           ipAddress,
-			UserAgent:    r.Header.Get("User-Agent"),
-			Referer:      r.Header.Get("Referer"),
-			Status:       rw.statusCode,
-			ResponseTime: responseTime,
-			ResponseSize: rw.bytesWritten,
-			ContentType:  rw.Header().Get("Content-Type"),
-		}
-
-		if logger != nil {
-			if err := logger.Log(stats); err != nil {
-				fmt.Printf("Warning: Failed to log request stats: %v\n", err)
+			rw := &responseWriter{
+				ResponseWriter: w,
+				statusCode:     200,
+				bytesWritten:   0,
 			}
-		}
-	})
+
+			next.ServeHTTP(rw, r)
+
+			responseTime := time.Since(start).Milliseconds()
+
+			ipAddress := r.RemoteAddr
+			if forwarded := r.Header.Get("X-Forwarded-For"); forwarded != "" {
+				ipAddress = strings.Split(forwarded, ",")[0]
+			} else if realIP := r.Header.Get("X-Real-IP"); realIP != "" {
+				ipAddress = realIP
+			}
+			if host, _, err := net.SplitHostPort(ipAddress); err == nil {
+				ipAddress = host
+			}
+
+			stats := RequestStats{
+				Timestamp:    start,
+				Method:       r.Method,
+				Path:         r.URL.Path,
+				IP:           ipAddress,
+				UserAgent:    r.Header.Get("User-Agent"),
+				Referer:      r.Header.Get("Referer"),
+				Status:       rw.statusCode,
+				ResponseTime: responseTime,
+				ResponseSize: rw.bytesWritten,
+				ContentType:  rw.Header().Get("Content-Type"),
+			}
+
+			if logger != nil {
+				if err := logger.Log(stats); err != nil {
+					fmt.Printf("Warning: Failed to log request stats: %v\n", err)
+				}
+			}
+		})
+	}
 }
