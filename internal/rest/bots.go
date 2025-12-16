@@ -3,9 +3,14 @@ package rest
 import (
 	"net/http"
 	"strings"
+
+	"lorem.video/internal/config"
+	"lorem.video/internal/stats"
 )
 
 func (rest *Rest) BotsMiddleware(next http.Handler) http.Handler {
+	botStatsMiddleware := stats.StatsMiddleware(config.AppPaths.LogsBots)
+
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		url := strings.ToLower(r.URL.Path)
 
@@ -22,7 +27,11 @@ func (rest *Rest) BotsMiddleware(next http.Handler) http.Handler {
 
 		for _, pattern := range botPatterns {
 			if strings.Contains(url, pattern) {
-				http.NotFound(w, r)
+				// Log the bot request with 404 status using the bot stats middleware
+				botHandler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+					http.NotFound(w, r)
+				})
+				botStatsMiddleware(botHandler).ServeHTTP(w, r)
 				return
 			}
 		}

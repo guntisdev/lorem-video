@@ -33,7 +33,8 @@ func main() {
 	mux.HandleFunc("GET /transcode/{params}", rest.Transcode)
 	mux.HandleFunc("GET /{params}", rest.ServeVideo)
 
-	handler := rest.RecoveryMiddleware(rest.BotsMiddleware(stats.StatsMiddleware(rest.CORSMiddleware(mux))))
+	statsMiddleware := stats.StatsMiddleware(config.AppPaths.LogsStats)
+	handler := rest.RecoveryMiddleware(rest.BotsMiddleware(statsMiddleware(rest.CORSMiddleware(mux))))
 
 	port := "3000"
 
