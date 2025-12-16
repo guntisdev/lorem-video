@@ -12,10 +12,10 @@ import (
 	"time"
 
 	"github.com/mileusna/useragent"
-	"lorem.video/internal/config"
 )
 
 type AnalyzerConfig struct {
+	LogDir             string // Directory containing log files
 	ExcludeStaticPaths bool   // Filter out /web/... paths
 	ExcludePartial     bool   // Filter out partial content (206 status)
 	ExcludeReferer     string // Filter out referrers containing this domain
@@ -73,7 +73,7 @@ type AnalysisResult struct {
 }
 
 func AnalyzeStats(analyzerConfig AnalyzerConfig) (*AnalysisResult, error) {
-	logDir := config.AppPaths.LogsStats
+	logDir := analyzerConfig.LogDir
 
 	// Find all log files in date range
 	files, err := findLogFiles(logDir, analyzerConfig)
