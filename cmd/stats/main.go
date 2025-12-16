@@ -9,6 +9,7 @@ import (
 	"strings"
 	"time"
 
+	"lorem.video/internal/config"
 	"lorem.video/internal/stats"
 )
 
@@ -24,6 +25,7 @@ func main() {
 		maxDate        = flag.String("max-date", "", "Maximum date YYYY-MM-DD (empty for all)")
 		topN           = flag.Int("top", 20, "Number of top results to show")
 		showFullUA     = flag.Bool("full-ua", false, "Show full user agent strings")
+		showBots       = flag.Bool("bots", false, "Show stats from bots folder")
 	)
 	flag.Parse()
 
@@ -33,6 +35,13 @@ func main() {
 		ExcludeReferer:     *excludeReferer,
 		MinDate:            *minDate,
 		MaxDate:            *maxDate,
+		LogDir: func() string {
+			if *showBots {
+				return config.AppPaths.LogsBots
+			} else {
+				return config.AppPaths.LogsStats
+			}
+		}(),
 	}
 
 	fmt.Printf("🔍 Analyzing stats...\n\n")
