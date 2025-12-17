@@ -196,7 +196,7 @@ func (s *VideoService) Transcode(ctx context.Context, spec config.VideoSpec, inp
 	output.mp4
 */
 
-func (s *VideoService) TranscodeHLS(ctx context.Context, res config.Resolution, inputPath, outputDir string) (<-chan string, <-chan error) {
+func (s *VideoService) TranscodeHLS(ctx context.Context, res config.Resolution, inputPath, outputPath string) (<-chan string, <-chan error) {
 	resultCh := make(chan string, 1)
 	errCh := make(chan error, 1)
 
@@ -204,13 +204,7 @@ func (s *VideoService) TranscodeHLS(ctx context.Context, res config.Resolution, 
 		defer close(resultCh)
 		defer close(errCh)
 
-		hlsDir := filepath.Join(outputDir, fmt.Sprintf("%dx%d", res.Width, res.Height))
-		if err := os.MkdirAll(hlsDir, 0755); err != nil {
-			errCh <- err
-			return
-		}
-
-		playlistPath := filepath.Join(hlsDir, "playlist.m3u8")
+		playlistPath := filepath.Join(outputPath, "playlist.m3u8")
 
 		args := []string{
 			"-i", inputPath,
@@ -227,7 +221,7 @@ func (s *VideoService) TranscodeHLS(ctx context.Context, res config.Resolution, 
 			"-hls_time", "1",
 			"-hls_segment_type", "fmp4",
 			"-hls_fmp4_init_filename", "init.mp4",
-			"-hls_segment_filename", filepath.Join(hlsDir, "chunk_%03d.mp4"),
+			"-hls_segment_filename", filepath.Join(outputPath, "chunk_%03d.mp4"),
 			playlistPath,
 		}
 

@@ -24,6 +24,12 @@ func StartupPregeneration() {
 			log.Printf("❌ Failed to pregenerate videos: %v", err)
 			return
 		}
+
+		_, err = PregenerateAllHLS(ctx)
+		if err != nil {
+			log.Printf("❌ Failed to pregenerate HLS streams: %v", err)
+			return
+		}
 	}()
 }
 
@@ -120,4 +126,78 @@ func EnsureDefaultSourceVideo() error {
 	}
 
 	return nil
+}
+
+// PregenerateAllHLS generates HLS streams for all source video files
+func PregenerateAllHLS(ctx context.Context) (map[string][]string, error) {
+	sourceFiles, err := config.GetSourceVideoFiles()
+	if err != nil {
+		return nil, fmt.Errorf("failed to get source video files: %w", err)
+	}
+
+	results := make(map[string][]string)
+
+	for _, sourceFile := range sourceFiles {
+		generatedStreams, err := PregenerateHLS(ctx, sourceFile)
+		if err != nil {
+			log.Printf("❌ Failed to pregenerate HLS streams for %s: %v", filepath.Base(sourceFile), err)
+			continue
+		}
+
+		results[filepath.Base(sourceFile)] = generatedStreams
+	}
+
+	return results, nil
+}
+
+// PregenerateHLS generates HLS streams for a specific source video file
+func PregenerateHLS(ctx context.Context, inputPath string) ([]string, error) {
+	filenameNoExt := strings.TrimSuffix(filepath.Base(inputPath), filepath.Ext(inputPath))
+	outputDir := filepath.Join(config.AppPaths.Streams, filenameNoExt)
+
+	if err := os.MkdirAll(outputDir, 0755); err != nil {
+		return nil, fmt.Errorf("failed to create output directory: %w", err)
+	}
+
+	hlsResolutions := map[string]config.Resolution{
+		"480p":  config.Resolutions["480p"],
+		"720p":  config.Resolutions["720p"],
+		"1080p": config.Resolutions["1080p"],
+	}
+
+	var generatedStreams []string
+	videoService := NewVideoService()
+
+	for resName, resolution := range hlsResolutions {
+		hlsDir := filepath.Join(outputDir, resName)
+		playlistPath := filepath.Join(hlsDir, "playlist.m3u8")
+
+		if _, err := os.Stat(playlistPath); err == nil {
+			// HLS stream already exists, skip generation
+			generatedStreams = append(generatedStreams, resName+": "+filepath.Base(playlistPath)+" (existing)")
+			continue
+		}
+
+		// Create directory before transcoding
+		if err := os.MkdirAll(hlsDir, 0755); err != nil {
+			return nil, fmt.Errorf("failed to create HLS directory %s: %w", hlsDir, err)
+		}
+
+		resultCh, errCh := videoService.TranscodeHLS(ctx, resolution, inputPath, hlsDir)
+
+		select {
+		case result := <-resultCh:
+			generatedStreams = append(generatedStreams, resName+": "+filepath.Base(result))
+			log.Printf("✅ Generated HLS stream %s for %s: %s", resName, filenameNoExt, filepath.Base(result))
+
+		case err := <-errCh:
+			return nil, fmt.Errorf("failed to generate HLS stream %s (%dx%d): %w",
+				resName, resolution.Width, resolution.Height, err)
+
+		case <-ctx.Done():
+			return nil, fmt.Errorf("HLS pregeneration cancelled: %w", ctx.Err())
+		}
+	}
+
+	return generatedStreams, nil
 }
