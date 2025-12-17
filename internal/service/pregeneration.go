@@ -199,5 +199,41 @@ func PregenerateHLS(ctx context.Context, inputPath string) ([]string, error) {
 		}
 	}
 
+	// Generate master playlist after all resolutions are transcoded
+	masterPlaylistPath := filepath.Join(outputDir, "master.m3u8")
+	if err := generateMasterPlaylist(masterPlaylistPath, hlsResolutions); err != nil {
+		return nil, fmt.Errorf("failed to generate master playlist: %w", err)
+	}
+
+	generatedStreams = append(generatedStreams, "master: "+filepath.Base(masterPlaylistPath))
+	log.Printf("✅ Generated master playlist for %s: %s", filenameNoExt, filepath.Base(masterPlaylistPath))
+
 	return generatedStreams, nil
+}
+
+func generateMasterPlaylist(masterPlaylistPath string, hlsResolutions map[string]config.Resolution) error {
+	// Define approximate bandwidth for each resolution (these are rough estimates)
+	bandwidths := map[string]int{
+		"480p":  800000,  // 800 kbps
+		"720p":  2000000, // 2 Mbps
+		"1080p": 5000000, // 5 Mbps
+	}
+
+	var content strings.Builder
+	content.WriteString("#EXTM3U\n")
+	content.WriteString("#EXT-X-VERSION:6\n\n")
+
+	resolutionOrder := []string{"480p", "720p", "1080p"}
+
+	for _, resName := range resolutionOrder {
+		if resolution, exists := hlsResolutions[resName]; exists {
+			bandwidth := bandwidths[resName]
+
+			content.WriteString(fmt.Sprintf("#EXT-X-STREAM-INF:BANDWIDTH=%d,RESOLUTION=%dx%d\n",
+				bandwidth, resolution.Width, resolution.Height))
+			content.WriteString(fmt.Sprintf("%s/playlist.m3u8\n\n", resName))
+		}
+	}
+
+	return os.WriteFile(masterPlaylistPath, []byte(content.String()), 0644)
 }
