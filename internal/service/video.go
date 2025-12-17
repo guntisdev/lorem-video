@@ -79,7 +79,8 @@ func (s *VideoService) Transcode(ctx context.Context, spec config.VideoSpec, inp
 				spec.Width, spec.Height, spec.Width, spec.Height),
 		}
 
-		// streaming flags based on format
+		// minimal header for streaming/progressive playback (To not download whole file)
+		// not to confuse with live streaming HLS, it's chunked differently
 		switch spec.Container {
 		case "mp4":
 			args = append(args, "-movflags", "frag_keyframe+empty_moov")
@@ -124,6 +125,7 @@ func (s *VideoService) Transcode(ctx context.Context, spec config.VideoSpec, inp
 		} else {
 			args = append(args, "-an") // no audio
 		}
+		log.Printf("args: %v", args)
 
 		args = append(args, fullOutputPath)
 
@@ -146,6 +148,81 @@ func (s *VideoService) Transcode(ctx context.Context, spec config.VideoSpec, inp
 
 	return resultCh, errCh
 
+}
+
+/*
+// for hls streams
+
+	-i bunny.mp4 -t 20 \
+	-vf scale=400:400:force_original_aspect_ratio=increase,crop=400:400 \
+	-c:v libx264 -r 30 -preset fast -threads 0 -crf 25 \
+	-c:a aac -b:a 128k -ac 2 \
+	-f hls \
+	-hls_time 1 \
+	-hls_segment_type fmp4 \
+	-hls_fmp4_init_filename "init.mp4" \
+	-hls_segment_filename "chunk_%03d.m4s" \
+	output.m3u8
+*/
+
+/*
+// for regular mp4 files
+	-i bunny.mp4 -t 20
+	-vf scale=400:400:force_original_aspect_ratio=increase,crop=400:400
+	-movflags frag_keyframe+empty_moov
+	-c:v libx264 -r 30 -preset fast -threads 0 -crf 25
+	-c:a aac -b:a 128k -ac 2
+	output.mp4
+*/
+
+func (s *VideoService) TranscodeHLS(ctx context.Context, res config.Resolution, inputPath, outputDir string) (<-chan string, <-chan error) {
+	resultCh := make(chan string, 1)
+	errCh := make(chan error, 1)
+
+	go func() {
+		defer close(resultCh)
+		defer close(errCh)
+
+		hlsDir := filepath.Join(outputDir, fmt.Sprintf("%dx%d", res.Width, res.Height))
+		if err := os.MkdirAll(hlsDir, 0755); err != nil {
+			errCh <- err
+			return
+		}
+
+		playlistPath := filepath.Join(hlsDir, "playlist.m3u8")
+
+		args := []string{
+			"-i", inputPath,
+			// No -t parameter = use full duration
+			"-vf", fmt.Sprintf("scale=%d:%d:force_original_aspect_ratio=increase,crop=%d:%d",
+				res.Width, res.Height, res.Width, res.Height),
+			"-c:v", "libx264",
+			"-preset", "fast",
+			"-crf", "23",
+			"-c:a", "aac",
+			"-b:a", "128k",
+			"-ac", "2",
+			"-f", "hls",
+			"-hls_time", "1",
+			"-hls_segment_type", "fmp4",
+			"-hls_fmp4_init_filename", "init.mp4",
+			"-hls_segment_filename", filepath.Join(hlsDir, "chunk_%03d.mp4"),
+			playlistPath,
+		}
+
+		cmd := exec.CommandContext(ctx, "ffmpeg", args...)
+		var stderr bytes.Buffer
+		cmd.Stderr = &stderr
+
+		if err := cmd.Run(); err != nil {
+			errCh <- fmt.Errorf("ffmpeg failed: %w\nOutput: %s", err, stderr.String())
+			return
+		}
+
+		resultCh <- playlistPath
+	}()
+
+	return resultCh, errCh
 }
 
 func (s *VideoService) GetInfo(name string) (*config.FFProbeOutput, error) {
