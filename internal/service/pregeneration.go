@@ -13,6 +13,11 @@ import (
 	"lorem.video/internal/config"
 )
 
+const (
+	HLSMasterPlaylist = "playlist.m3u8"
+	HLSMediaPlaylist  = "media.m3u8"
+)
+
 // StartupPregeneration runs video pregeneration in the background on app startup
 func StartupPregeneration() {
 	go func() {
@@ -170,7 +175,7 @@ func PregenerateHLS(ctx context.Context, inputPath string) ([]string, error) {
 
 	for resName, resolution := range hlsResolutions {
 		hlsDir := filepath.Join(outputDir, resName)
-		playlistPath := filepath.Join(hlsDir, "playlist.m3u8")
+		playlistPath := filepath.Join(hlsDir, HLSMediaPlaylist)
 
 		if _, err := os.Stat(playlistPath); err == nil {
 			// HLS stream already exists, skip generation
@@ -200,7 +205,7 @@ func PregenerateHLS(ctx context.Context, inputPath string) ([]string, error) {
 	}
 
 	// Generate master playlist after all resolutions are transcoded
-	masterPlaylistPath := filepath.Join(outputDir, "master.m3u8")
+	masterPlaylistPath := filepath.Join(outputDir, HLSMasterPlaylist)
 	if err := generateMasterPlaylist(masterPlaylistPath, hlsResolutions); err != nil {
 		return nil, fmt.Errorf("failed to generate master playlist: %w", err)
 	}
@@ -231,7 +236,7 @@ func generateMasterPlaylist(masterPlaylistPath string, hlsResolutions map[string
 
 			content.WriteString(fmt.Sprintf("#EXT-X-STREAM-INF:BANDWIDTH=%d,RESOLUTION=%dx%d\n",
 				bandwidth, resolution.Width, resolution.Height))
-			content.WriteString(fmt.Sprintf("%s/playlist.m3u8\n\n", resName))
+			content.WriteString(fmt.Sprintf("%s/%s\n\n", resName, HLSMediaPlaylist))
 		}
 	}
 
