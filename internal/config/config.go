@@ -12,6 +12,7 @@ import (
 type Paths struct {
 	Data        string
 	Video       string
+	Streams     string
 	SourceVideo string
 	Logs        string
 	LogsStats   string
@@ -33,6 +34,7 @@ func initPaths() *Paths {
 	return &Paths{
 		Data:        dataDir,
 		Video:       filepath.Join(dataDir, "video"),
+		Streams:     filepath.Join(dataDir, "streams"),
 		SourceVideo: sourceVideoDir,
 		Logs:        filepath.Join(dataDir, "logs"),
 		LogsStats:   filepath.Join(dataDir, "logs", "stats"),
@@ -65,6 +67,7 @@ func EnsureDirectories() error {
 		AppPaths.Data,
 		AppPaths.SourceVideo,
 		AppPaths.Video,
+		AppPaths.Streams,
 		AppPaths.Logs,
 		AppPaths.LogsStats,
 		AppPaths.LogsBots,
