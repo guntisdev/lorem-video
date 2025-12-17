@@ -19,8 +19,7 @@ func main() {
 		log.Fatalf("Failed to create default source video: %v", err)
 	}
 
-	videoService := service.NewVideoService()
-	videoService.StartupPregeneration()
+	service.StartupPregeneration()
 
 	rest := rest.New()
 	mux := http.NewServeMux()

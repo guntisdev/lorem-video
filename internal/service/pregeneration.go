@@ -13,24 +13,13 @@ import (
 	"lorem.video/internal/config"
 )
 
-// PregenerationService handles all pregeneration and path-related logic
-type PregenerationService struct {
-	videoService *VideoService
-}
-
-func NewPregenerationService(videoService *VideoService) *PregenerationService {
-	return &PregenerationService{
-		videoService: videoService,
-	}
-}
-
 // StartupPregeneration runs video pregeneration in the background on app startup
-func (s *PregenerationService) StartupPregeneration() {
+func StartupPregeneration() {
 	go func() {
 		ctx, cancel := context.WithTimeout(context.Background(), 15*time.Minute)
 		defer cancel()
 
-		_, err := s.PregenerateAllVideos(ctx)
+		_, err := PregenerateAllVideos(ctx)
 		if err != nil {
 			log.Printf("❌ Failed to pregenerate videos: %v", err)
 			return
@@ -39,7 +28,7 @@ func (s *PregenerationService) StartupPregeneration() {
 }
 
 // PregenerateAllVideos generates all pregenerated videos for all source files
-func (s *PregenerationService) PregenerateAllVideos(ctx context.Context) (map[string][]string, error) {
+func PregenerateAllVideos(ctx context.Context) (map[string][]string, error) {
 	sourceFiles, err := config.GetSourceVideoFiles()
 	if err != nil {
 		return nil, fmt.Errorf("failed to get source video files: %w", err)
@@ -48,7 +37,7 @@ func (s *PregenerationService) PregenerateAllVideos(ctx context.Context) (map[st
 	results := make(map[string][]string)
 
 	for _, sourceFile := range sourceFiles {
-		generatedFiles, err := s.PregenerateVideos(ctx, sourceFile)
+		generatedFiles, err := PregenerateVideos(ctx, sourceFile)
 		if err != nil {
 			log.Printf("❌ Failed to pregenerate videos for %s: %v", filepath.Base(sourceFile), err)
 			continue
@@ -60,7 +49,7 @@ func (s *PregenerationService) PregenerateAllVideos(ctx context.Context) (map[st
 	return results, nil
 }
 
-func (s *PregenerationService) PregenerateVideos(ctx context.Context, inputPath string) ([]string, error) {
+func PregenerateVideos(ctx context.Context, inputPath string) ([]string, error) {
 	filenameNoExt := strings.TrimSuffix(filepath.Base(inputPath), filepath.Ext(inputPath))
 	outputDir := filepath.Join(config.AppPaths.Video, filenameNoExt)
 
@@ -70,9 +59,12 @@ func (s *PregenerationService) PregenerateVideos(ctx context.Context, inputPath 
 
 	var generatedFiles []string
 
+	// Create a video service for transcoding
+	videoService := NewVideoService()
+
 	for i, spec := range config.DefaultPregenSpecs {
 		spec.Name = filenameNoExt
-		resultCh, errCh := s.videoService.Transcode(ctx, spec, inputPath, outputDir)
+		resultCh, errCh := videoService.Transcode(ctx, spec, inputPath, outputDir)
 
 		// Wait for completion
 		select {
@@ -90,10 +82,6 @@ func (s *PregenerationService) PregenerateVideos(ctx context.Context, inputPath 
 	}
 
 	return generatedFiles, nil
-}
-
-func (s *PregenerationService) GetDefaultSourceVideo() string {
-	return config.AppPaths.DefaultSourceVideo
 }
 
 // GenerateDefaultSourceVideo creates a default test video using FFmpeg generators
