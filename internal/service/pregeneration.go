@@ -13,11 +13,6 @@ import (
 	"lorem.video/internal/config"
 )
 
-const (
-	HLSMasterPlaylist = "playlist.m3u8"
-	HLSMediaPlaylist  = "media.m3u8"
-)
-
 // StartupPregeneration runs video pregeneration in the background on app startup
 func StartupPregeneration() {
 	go func() {
@@ -175,7 +170,7 @@ func PregenerateHLS(ctx context.Context, inputPath string) ([]string, error) {
 
 	for resName, resolution := range hlsResolutions {
 		hlsDir := filepath.Join(outputDir, resName)
-		playlistPath := filepath.Join(hlsDir, HLSMediaPlaylist)
+		playlistPath := filepath.Join(hlsDir, config.HLSMediaPlaylist)
 
 		if _, err := os.Stat(playlistPath); err == nil {
 			// HLS stream already exists, skip generation
@@ -204,14 +199,18 @@ func PregenerateHLS(ctx context.Context, inputPath string) ([]string, error) {
 		}
 	}
 
-	// Generate master playlist after all resolutions are transcoded
-	masterPlaylistPath := filepath.Join(outputDir, HLSMasterPlaylist)
-	if err := generateMasterPlaylist(masterPlaylistPath, hlsResolutions); err != nil {
-		return nil, fmt.Errorf("failed to generate master playlist: %w", err)
-	}
+	masterPlaylistPath := filepath.Join(outputDir, config.HLSMasterPlaylist)
+	if _, err := os.Stat(masterPlaylistPath); err == nil {
+		// Master playlist already exists, skip generation
+		generatedStreams = append(generatedStreams, "master: "+filepath.Base(masterPlaylistPath)+" (existing)")
+	} else {
+		if err := generateMasterPlaylist(masterPlaylistPath, hlsResolutions); err != nil {
+			return nil, fmt.Errorf("failed to generate master playlist: %w", err)
+		}
 
-	generatedStreams = append(generatedStreams, "master: "+filepath.Base(masterPlaylistPath))
-	log.Printf("✅ Generated master playlist for %s: %s", filenameNoExt, filepath.Base(masterPlaylistPath))
+		generatedStreams = append(generatedStreams, "master: "+filepath.Base(masterPlaylistPath))
+		log.Printf("✅ Generated master playlist for %s: %s", filenameNoExt, filepath.Base(masterPlaylistPath))
+	}
 
 	return generatedStreams, nil
 }
@@ -236,7 +235,7 @@ func generateMasterPlaylist(masterPlaylistPath string, hlsResolutions map[string
 
 			content.WriteString(fmt.Sprintf("#EXT-X-STREAM-INF:BANDWIDTH=%d,RESOLUTION=%dx%d\n",
 				bandwidth, resolution.Width, resolution.Height))
-			content.WriteString(fmt.Sprintf("%s/%s\n\n", resName, HLSMediaPlaylist))
+			content.WriteString(fmt.Sprintf("%s/%s\n\n", resName, config.HLSMediaPlaylist))
 		}
 	}
 

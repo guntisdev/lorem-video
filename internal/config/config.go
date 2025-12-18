@@ -8,6 +8,14 @@ import (
 	"strings"
 )
 
+// Hls file naming
+const (
+	HLSMasterPlaylist = "playlist.m3u8"
+	HLSMediaPlaylist  = "media.m3u8"
+	HLSChunkFormat    = "chunk_%03d.mp4"
+	HLSInit           = "init.mp4"
+)
+
 // Paths holds all application directory paths
 type Paths struct {
 	Data        string
