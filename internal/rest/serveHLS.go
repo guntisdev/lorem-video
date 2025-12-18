@@ -2,7 +2,6 @@ package rest
 
 import (
 	"fmt"
-	"log"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -16,8 +15,6 @@ import (
 func (r *Rest) ServeHLS(w http.ResponseWriter, req *http.Request) {
 	videoName := req.PathValue("videoName")
 	path := req.PathValue("path")
-
-	log.Printf("serveHLS %s - %s", videoName, path)
 
 	if videoName == "" {
 		videoName = config.DefaultVideoSpec.Name
@@ -34,12 +31,10 @@ func (r *Rest) ServeHLS(w http.ResponseWriter, req *http.Request) {
 
 	fullPath := filepath.Join(videoNameDir, path)
 
-	// log.Printf(fullPath)
-
 	// /bunny/playlist.m3u8
 	if path == config.HLSMasterPlaylist {
 		w.Header().Set("Content-Type", "application/vnd.apple.mpegurl")
-		w.Header().Set("Cache-Control", "public, max-age=1")
+		w.Header().Set("Cache-Control", "no-cache")
 		http.ServeFile(w, req, fullPath)
 		return
 	}
@@ -53,10 +48,26 @@ func (r *Rest) ServeHLS(w http.ResponseWriter, req *http.Request) {
 			return
 		}
 
-		playlist := generateMediaPlaylist()
+		// TODO maybe better pattern match from config.HLSChunkFormat
+		chunkPattern := filepath.Join(resolutionDir, "chunk_*.mp4")
+		matches, err := filepath.Glob(chunkPattern)
+		if err != nil {
+			http.Error(w, "Error reading chunks", http.StatusInternalServerError)
+			return
+		}
+
+		// IMPORTANT: exclude last segment as it may not be full second and wouldn't loop infinitely
+		chunkCount := len(matches) - 1
+
+		if chunkCount < 1 {
+			http.Error(w, "No chunks found", http.StatusNotFound)
+			return
+		}
+
+		playlist := generateMediaPlaylist(chunkCount)
 
 		w.Header().Set("Content-Type", "application/vnd.apple.mpegurl")
-		w.Header().Set("Cache-Control", "public, max-age=1")
+		w.Header().Set("Cache-Control", "no-cache")
 		w.Write([]byte(playlist))
 		return
 	}
@@ -64,8 +75,8 @@ func (r *Rest) ServeHLS(w http.ResponseWriter, req *http.Request) {
 	// /bunny/720p/init.mp4
 	if strings.HasSuffix(path, "/"+config.HLSInit) {
 		w.Header().Set("Content-Type", "video/mp4")
-		// w.Header().Set("Cache-Control", "public, max-age=31536000")
-		w.Header().Set("Cache-Control", "public, max-age=1")
+		w.Header().Set("Accept-Ranges", "bytes")
+		w.Header().Set("Cache-Control", "no-cache")
 		http.ServeFile(w, req, fullPath)
 		return
 	}
@@ -105,12 +116,10 @@ func (r *Rest) ServeHLS(w http.ResponseWriter, req *http.Request) {
 
 		chunkId := int(hlsSeq % int64(chunkCount))
 		chunkName := fmt.Sprintf("chunk_%03d.mp4", chunkId)
-		log.Printf("%s", chunkName)
 		chunkFile := filepath.Join(filepath.Dir(fullPath), chunkName)
 
 		w.Header().Set("Content-Type", "video/mp4")
-		// w.Header().Set("Cache-Control", "public, max-age=31536000")
-		w.Header().Set("Cache-Control", "public, max-age=1")
+		w.Header().Set("Accept-Ranges", "bytes")
 		http.ServeFile(w, req, chunkFile)
 		return
 	}
@@ -118,7 +127,7 @@ func (r *Rest) ServeHLS(w http.ResponseWriter, req *http.Request) {
 	http.Error(w, "No hls found", http.StatusNotFound)
 }
 
-func generateMediaPlaylist() string {
+func generateMediaPlaylist(chunkCount int) string {
 	const segmentsToServe = 5
 
 	now := time.Now().Unix()
@@ -131,11 +140,18 @@ func generateMediaPlaylist() string {
 	chunks.WriteString("#EXT-X-MAP:URI=\"init.mp4\"\n")
 
 	for i := 0; i < segmentsToServe; i++ {
+		seq := now + int64(i)
+		currentChunk := int(seq) % chunkCount
+		prevChunk := int(seq-1) % chunkCount
+
+		// Discontinuity when PTS wraps (chunk goes last to first one)
+		if i > 0 && currentChunk < prevChunk {
+			chunks.WriteString("#EXT-X-DISCONTINUITY\n")
+		}
+
 		chunks.WriteString("#EXTINF:1.000000,\n")
 		chunks.WriteString(fmt.Sprintf("media.%d.mp4\n", now+int64(i)))
 	}
-
-	// log.Printf(chunks.String())
 
 	return chunks.String()
 }
