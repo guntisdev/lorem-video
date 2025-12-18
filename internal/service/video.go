@@ -171,31 +171,6 @@ func (s *VideoService) Transcode(ctx context.Context, spec config.VideoSpec, inp
 
 }
 
-/*
-// for hls streams
-
-	-i bunny.mp4 -t 20 \
-	-vf scale=400:400:force_original_aspect_ratio=increase,crop=400:400 \
-	-c:v libx264 -r 30 -preset fast -threads 0 -crf 25 \
-	-c:a aac -b:a 128k -ac 2 \
-	-f hls \
-	-hls_time 1 \
-	-hls_segment_type fmp4 \
-	-hls_fmp4_init_filename "init.mp4" \
-	-hls_segment_filename "chunk_%03d.m4s" \
-	output.m3u8
-*/
-
-/*
-// for regular mp4 files
-	-i bunny.mp4 -t 20
-	-vf scale=400:400:force_original_aspect_ratio=increase,crop=400:400
-	-movflags frag_keyframe+empty_moov
-	-c:v libx264 -r 30 -preset fast -threads 0 -crf 25
-	-c:a aac -b:a 128k -ac 2
-	output.mp4
-*/
-
 func (s *VideoService) TranscodeHLS(ctx context.Context, res config.Resolution, inputPath, outputPath string) (<-chan string, <-chan error) {
 	resultCh := make(chan string, 1)
 	errCh := make(chan error, 1)
@@ -204,7 +179,7 @@ func (s *VideoService) TranscodeHLS(ctx context.Context, res config.Resolution, 
 		defer close(resultCh)
 		defer close(errCh)
 
-		playlistPath := filepath.Join(outputPath, "playlist.m3u8")
+		playlistPath := filepath.Join(outputPath, config.HLSMediaPlaylist)
 
 		args := []string{
 			"-i", inputPath,
@@ -220,8 +195,8 @@ func (s *VideoService) TranscodeHLS(ctx context.Context, res config.Resolution, 
 			"-f", "hls",
 			"-hls_time", "1",
 			"-hls_segment_type", "fmp4",
-			"-hls_fmp4_init_filename", "init.mp4",
-			"-hls_segment_filename", filepath.Join(outputPath, "chunk_%03d.mp4"),
+			"-hls_fmp4_init_filename", config.HLSInit,
+			"-hls_segment_filename", filepath.Join(outputPath, config.HLSChunkFormat),
 			playlistPath,
 		}
 
