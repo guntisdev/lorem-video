@@ -153,7 +153,7 @@ func PregenerateAllHLS(ctx context.Context) (map[string][]string, error) {
 // PregenerateHLS generates HLS streams for a specific source video file
 func PregenerateHLS(ctx context.Context, inputPath string) ([]string, error) {
 	filenameNoExt := strings.TrimSuffix(filepath.Base(inputPath), filepath.Ext(inputPath))
-	outputDir := filepath.Join(config.AppPaths.Streams, filenameNoExt)
+	outputDir := filepath.Join(config.AppPaths.Stream, filenameNoExt)
 
 	if err := os.MkdirAll(outputDir, 0755); err != nil {
 		return nil, fmt.Errorf("failed to create output directory: %w", err)
