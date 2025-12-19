@@ -17,7 +17,9 @@ func (rest *Rest) BotsMiddleware(next http.Handler) http.Handler {
 		botPatterns := []string{
 			".php",
 			"/wp-",
-			"/_next/",
+			"/_next",
+			"/_react",
+			"/_ignition", // laravel debug/error handler
 			"/.git",
 			"/.env",
 			"/.htaccess",
