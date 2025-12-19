@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"log"
 	"net/http"
 
@@ -30,16 +31,14 @@ func main() {
 	mux.HandleFunc("GET /web/{path...}", rest.ServeStaticFiles)
 	mux.HandleFunc("GET /getInfo/{name}", rest.GetVideoInfo)
 	mux.HandleFunc("GET /transcode/{params}", rest.Transcode)
-	mux.HandleFunc("GET /stream/{videoName}/{path...}", rest.ServeHLS)
+	mux.HandleFunc("GET /hls/{videoName}/{path...}", rest.ServeHLS)
 	mux.HandleFunc("GET /{params}", rest.ServeVideo)
 
 	statsMiddleware := stats.StatsMiddleware(config.AppPaths.LogsStats)
 	handler := rest.RecoveryMiddleware(rest.BotsMiddleware(statsMiddleware(rest.CORSMiddleware(mux))))
 
-	port := "3000"
-
-	log.Printf("Server starting on port %s...", port)
-	if err := http.ListenAndServe(":"+port, handler); err != nil {
+	log.Printf("Server starting on port %d...", config.Port)
+	if err := http.ListenAndServe(fmt.Sprintf(":%d", config.Port), handler); err != nil {
 		log.Fatal(err)
 	}
 }

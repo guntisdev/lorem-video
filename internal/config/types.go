@@ -86,6 +86,16 @@ var Resolutions = map[string]Resolution{
 	"4k":    {3840, 2160},
 }
 
+var ResolutionsName = map[string]string{
+	"240p":  "LOWEST",
+	"360p":  "LOW",
+	"480p":  "MEDIUM",
+	"720p":  "HIGH",
+	"1080p": "HD",
+	"1440p": "QHD",
+	"4k":    "4K",
+}
+
 const (
 	MinDimension = 64
 	MaxDimension = 3840 // 4K

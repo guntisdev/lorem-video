@@ -204,7 +204,7 @@ func PregenerateHLS(ctx context.Context, inputPath string) ([]string, error) {
 		// Master playlist already exists, skip generation
 		generatedStreams = append(generatedStreams, "master: "+filepath.Base(masterPlaylistPath)+" (existing)")
 	} else {
-		if err := generateMasterPlaylist(masterPlaylistPath, hlsResolutions); err != nil {
+		if err := generateMasterPlaylist(masterPlaylistPath, hlsResolutions, filenameNoExt); err != nil {
 			return nil, fmt.Errorf("failed to generate master playlist: %w", err)
 		}
 
@@ -215,7 +215,7 @@ func PregenerateHLS(ctx context.Context, inputPath string) ([]string, error) {
 	return generatedStreams, nil
 }
 
-func generateMasterPlaylist(masterPlaylistPath string, hlsResolutions map[string]config.Resolution) error {
+func generateMasterPlaylist(masterPlaylistPath string, hlsResolutions map[string]config.Resolution, videoName string) error {
 	// Define approximate bandwidth for each resolution (these are rough estimates)
 	bandwidths := map[string]int{
 		"480p":  800000,  // 800 kbps
@@ -228,14 +228,16 @@ func generateMasterPlaylist(masterPlaylistPath string, hlsResolutions map[string
 	content.WriteString("#EXT-X-VERSION:6\n\n")
 
 	resolutionOrder := []string{"480p", "720p", "1080p"}
+	baseURL := config.GetBaseURL()
 
-	for _, resName := range resolutionOrder {
-		if resolution, exists := hlsResolutions[resName]; exists {
-			bandwidth := bandwidths[resName]
+	for _, resKey := range resolutionOrder {
+		if resolution, exists := hlsResolutions[resKey]; exists {
+			bandwidth := bandwidths[resKey]
+			resName := config.ResolutionsName[resKey]
 
-			content.WriteString(fmt.Sprintf("#EXT-X-STREAM-INF:BANDWIDTH=%d,RESOLUTION=%dx%d\n",
-				bandwidth, resolution.Width, resolution.Height))
-			content.WriteString(fmt.Sprintf("%s/%s\n\n", resName, config.HLSMediaPlaylist))
+			content.WriteString(fmt.Sprintf("#EXT-X-STREAM-INF:BANDWIDTH=%d,NAME=%s,RESOLUTION=%dx%d\n",
+				bandwidth, resName, resolution.Width, resolution.Height))
+			content.WriteString(fmt.Sprintf("%s/hls/%s/%s/%s\n\n", baseURL, videoName, resKey, config.HLSMediaPlaylist))
 		}
 	}
 
