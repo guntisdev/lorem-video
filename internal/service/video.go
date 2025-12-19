@@ -183,7 +183,7 @@ func (s *VideoService) TranscodeHLS(ctx context.Context, res config.Resolution, 
 
 		args := []string{
 			"-i", inputPath,
-			// No -t parameter = use full duration
+			"-t", "60", // max duration 60sec
 			"-vf", fmt.Sprintf("scale=%d:%d:force_original_aspect_ratio=increase,crop=%d:%d",
 				res.Width, res.Height, res.Width, res.Height),
 			"-c:v", "libx264",
