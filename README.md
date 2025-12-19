@@ -73,6 +73,14 @@ task test:integration # Run integration tests (requires FFmpeg)
 task deps             # Download and tidy dependencies
 ```
 
+### FFmpeg commands
+```bash
+// source file duration
+ffprobe -v error -show_entries format=duration -of default=noprint_wrappers=1:nokey=1 input.mp4
+// add padding to get GOP to round second
+ffmpeg -i input.mp4 -vf "tpad=stop_mode=clone:stop_duration=0.544" output.mp4
+```
+
 ### Project Structure
 ```
 ├── cmd/
