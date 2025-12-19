@@ -66,6 +66,7 @@ func (r *Rest) ServeHLS(w http.ResponseWriter, req *http.Request) {
 
 		playlist := generateMediaPlaylist(chunkCount)
 
+		time.Sleep(100 * time.Millisecond) // artificial delay to avoid Chrome hammering requests
 		w.Header().Set("Content-Type", "application/vnd.apple.mpegurl")
 		w.Header().Set("Cache-Control", "no-cache")
 		w.Write([]byte(playlist))

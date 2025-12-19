@@ -20,6 +20,7 @@ func (rest *Rest) BotsMiddleware(next http.Handler) http.Handler {
 			"/_next",
 			"/_react",
 			"/_ignition", // laravel debug/error handler
+			"/laravel",
 			"/.git",
 			"/.env",
 			"/.htaccess",
