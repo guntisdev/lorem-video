@@ -16,7 +16,6 @@ const (
 	HLSInit           = "init.mp4"
 )
 
-// Paths holds all application directory paths
 type Paths struct {
 	Data        string
 	Video       string
@@ -28,12 +27,20 @@ type Paths struct {
 	LogsErrors  string
 	Tmp         string
 
-	// Default files
 	DefaultSourceVideo string // bunny.mp4 path
 }
 
-// Global paths instance - initialized once and reused everywhere
 var AppPaths = initPaths()
+
+const Port = 3000
+
+func GetBaseURL() string {
+	baseURL := os.Getenv("BASE_URL")
+	if baseURL == "" {
+		baseURL = fmt.Sprintf("http://localhost:%d", Port)
+	}
+	return baseURL
+}
 
 func initPaths() *Paths {
 	dataDir := getDataDir()

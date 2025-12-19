@@ -1,6 +1,8 @@
 services:
   app:
     build: .
+    environment:
+      - BASE_URL=https://lorem.video
     ports:
       - "3000:3000"
     restart: unless-stopped
