@@ -20,6 +20,7 @@ func main() {
 	var (
 		excludeStatic  = flag.Bool("exclude-static", true, "Exclude /web/... paths")
 		excludePartial = flag.Bool("exclude-partial", true, "Exclude partial content (206 responses)")
+		// TODO replace lorem.video with GetBaseURL() from config
 		excludeReferer = flag.String("exclude-referer", "lorem.video", "Exclude referrers containing this domain (empty to include all)")
 		minDate        = flag.String("min-date", defaultMinDate, "Minimum date YYYY-MM-DD (default: 7 days ago)")
 		maxDate        = flag.String("max-date", "", "Maximum date YYYY-MM-DD (empty for all)")

@@ -203,13 +203,16 @@ func processLogFile(filename string, config AnalyzerConfig, result *AnalysisResu
 		// Categorize requests
 		categorizeRequest(&stat, result)
 
-		// Track endpoints
-		if ep, exists := endpoints[stat.Path]; exists {
+		normalizedPath := stat.Path
+		if normalizedPath == "" {
+			normalizedPath = "/"
+		}
+		if ep, exists := endpoints[normalizedPath]; exists {
 			ep.Count++
 			ep.Bytes += stat.ResponseSize
 		} else {
-			endpoints[stat.Path] = &EndpointStat{
-				Path:  stat.Path,
+			endpoints[normalizedPath] = &EndpointStat{
+				Path:  normalizedPath,
 				Count: 1,
 				Bytes: stat.ResponseSize,
 			}
