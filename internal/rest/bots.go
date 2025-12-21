@@ -24,6 +24,7 @@ func (rest *Rest) BotsMiddleware(next http.Handler) http.Handler {
 			"/.git",
 			"/.env",
 			"/.htaccess",
+			"/passwd",
 			"/.aws",
 			"/phpmyadmin",
 		}
