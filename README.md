@@ -79,6 +79,8 @@ task deps             # Download and tidy dependencies
 ffprobe -v error -show_entries format=duration -of default=noprint_wrappers=1:nokey=1 input.mp4
 // add padding to get GOP to round second
 ffmpeg -i input.mp4 -vf "tpad=stop_mode=clone:stop_duration=0.544" output.mp4
+// generate thumbnails
+ffmpeg -i bunny.mp4 -ss 00:00:01 -vframes 1 -vf scale=1280:720 bunny-thumb.webp
 ```
 
 ### Project Structure

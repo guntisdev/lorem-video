@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"
+    xmlns:video="http://www.google.com/schemas/sitemap-video/1.1">
   <url>
     <loc>https://lorem.video/</loc>
     <changefreq>weekly</changefreq>
@@ -14,5 +15,47 @@
     <loc>https://lorem.video/web/privacy.html</loc>
     <changefreq>monthly</changefreq>
     <priority>0.5</priority>
+  </url>
+
+    <url>
+    <loc>https://lorem.video/bunny</loc>
+    <video:video>
+      <video:thumbnail_loc>https://lorem.video/web/img/bunny-thumb.webp</video:thumbnail_loc>
+      <video:title>Big Buck Bunny - Free Placeholder Test Video</video:title>
+      <video:description>Big Buck Bunny placeholder video for developers. Perfect for testing video players, streaming applications, and development environments.</video:description>
+      <video:content_loc>https://lorem.video/bunny</video:content_loc>
+      <video:duration>596</video:duration>
+    </video:video>
+  </url>
+
+  <url>
+    <loc>https://lorem.video/cat</loc>
+    <video:video>
+      <video:thumbnail_loc>https://lorem.video/web/img/cat-thumb.webp</video:thumbnail_loc>
+      <video:title>Cat Playing - Free Placeholder Test Video</video:title>
+      <video:description>Cat Pocco playing with his favorite toy. Sample video for testing and development purposes.</video:description>
+      <video:content_loc>https://lorem.video/cat</video:content_loc>
+    </video:video>
+  </url>
+
+  <url>
+    <loc>https://lorem.video/test</loc>
+    <video:video>
+      <video:thumbnail_loc>https://lorem.video/web/img/ffmpeg-test-thumb.webp</video:thumbnail_loc>
+      <video:title>FFmpeg Test Video - Color Bars Placeholder</video:title>
+      <video:description>FFmpeg test pattern video with color bars. Ideal for testing video codecs, players, and streaming setups.</video:description>
+      <video:content_loc>https://lorem.video/test</video:content_loc>
+    </video:video>
+  </url>
+
+  <url>
+    <loc>https://lorem.video/720p</loc>
+    <video:video>
+      <video:thumbnail_loc>https://lorem.video/web/img/bunny-thumb.webp</video:thumbnail_loc>
+      <video:title>720p Placeholder Video - Big Buck Bunny</video:title>
+      <video:description>Big Buck Bunny in 720p resolution. Free placeholder video for testing HD video playback and development.</video:description>
+      <video:content_loc>https://lorem.video/720p</video:content_loc>
+      <video:duration>596</video:duration>
+    </video:video>
   </url>
 </urlset>
