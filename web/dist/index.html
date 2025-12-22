@@ -120,6 +120,10 @@
                 <h4>📦 Containers</h4>
                 <div>{{range .Containers}}<span class="badge">{{.}}</span>{{end}}</div>
             </div>
+            <div class="card">
+                <h4>🏷️ Names</h4>
+                <div>{{range .SourceVideos}}<span class="badge">{{.}}</span>{{end}}</div>
+            </div>
         </div>
         
         <table>
@@ -212,14 +216,13 @@
     </div>
 
     <div class="section">
-        <h2>📹 Available Source Videos</h2>
-        <p>Current source videos available for transcoding:</p>
+        <h2>📹 Live HLS streams</h2>
+        <p>Available (fake) live streams:</p>
         <div class="grid">
             {{range .SourceVideos}}
             <div class="card">
-                <h4>🎬 <a href="https://{{$.Domain}}/{{.}}">{{.}}</a></h4>
-                <p>Source video available for transcoding</p>
-                <p><strong>Usage:</strong> Include "{{.}}" in your filename or omit for default</p>
+                <h4>🎬 <a href="https://{{$.Domain}}/hls/{{.}}">{{.}}</a></h4>
+                <p><strong>Usage:</strong> Include "{{.}}" after /hls/ path</p>
             </div>
             {{end}}
         </div>
@@ -240,6 +243,11 @@
                     <td><code>/{params}</code></td>
                     <td>GET</td>
                     <td>Get or generate video with specified parameters</td>
+                </tr>
+                <tr>
+                    <td><code>/hls/{fileName}</code></td>
+                    <td>GET</td>
+                    <td>Stream live HLS videos (1 second GOP). <i>Not configurable yet!</i></td>
                 </tr>
                 <tr>
                     <td><code>/getInfo/{filename}</code></td>
