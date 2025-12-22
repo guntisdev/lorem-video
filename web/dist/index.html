@@ -122,7 +122,9 @@
             </div>
             <div class="card">
                 <h4>🏷️ Names</h4>
-                <div>{{range .SourceVideos}}<span class="badge">{{.}}</span>{{end}}</div>
+                <div>{{range .SourceVideos}}<span class="badge">
+                    <a href="/{{.}}">{{.}}</a>
+                </span>{{end}}</div>
             </div>
         </div>
         
@@ -221,7 +223,7 @@
         <div class="grid">
             {{range .SourceVideos}}
             <div class="card">
-                <h4>🎬 <a href="https://{{$.Domain}}/hls/{{.}}">{{.}}</a></h4>
+                <h4>🎬 <a href="/hls/{{.}}">{{.}}</a></h4>
                 <p><strong>Usage:</strong> Include "{{.}}" after /hls/ path</p>
             </div>
             {{end}}
