@@ -2,8 +2,10 @@ package service
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"log"
+	"math"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -159,10 +161,28 @@ func PregenerateHLS(ctx context.Context, inputPath string) ([]string, error) {
 		return nil, fmt.Errorf("failed to create output directory: %w", err)
 	}
 
+	// Check if input video is vertical (portrait orientation)
+	isVertical, err := isVideoVertical(inputPath)
+	if err != nil {
+		log.Printf("⚠️  Failed to detect video orientation for %s, using default resolutions: %v", filenameNoExt, err)
+		isVertical = false
+	}
+
 	hlsResolutions := map[string]config.Resolution{
 		"480p":  config.Resolutions["480p"],
 		"720p":  config.Resolutions["720p"],
 		"1080p": config.Resolutions["1080p"],
+	}
+
+	// If video is vertical, swap width/height for HLS transcoding
+	if isVertical {
+		for key, res := range hlsResolutions {
+			hlsResolutions[key] = config.Resolution{
+				Width:  res.Height,
+				Height: res.Width,
+			}
+		}
+		log.Printf("Detected vertical video %s, using portrait resolutions for HLS", filenameNoExt)
 	}
 
 	var generatedStreams []string
@@ -242,4 +262,55 @@ func generateMasterPlaylist(masterPlaylistPath string, hlsResolutions map[string
 	}
 
 	return os.WriteFile(masterPlaylistPath, []byte(content.String()), 0644)
+}
+
+func isVideoVertical(inputPath string) (bool, error) {
+	cmd := exec.Command("ffprobe",
+		"-v", "error",
+		"-select_streams", "v:0",
+		"-show_entries", "stream=width,height:stream_side_data=rotation",
+		"-of", "json",
+		inputPath,
+	)
+
+	output, err := cmd.Output()
+	if err != nil {
+		return false, fmt.Errorf("ffprobe failed: %w", err)
+	}
+
+	// Parse JSON output
+	var result struct {
+		Streams []struct {
+			Width        int `json:"width"`
+			Height       int `json:"height"`
+			SideDataList []struct {
+				Rotation int `json:"rotation"`
+			} `json:"side_data_list"`
+		} `json:"streams"`
+	}
+
+	if err := json.Unmarshal(output, &result); err != nil {
+		return false, fmt.Errorf("failed to parse ffprobe JSON: %w", err)
+	}
+
+	if len(result.Streams) == 0 {
+		return false, fmt.Errorf("no video streams found")
+	}
+
+	stream := result.Streams[0]
+	width, height := stream.Width, stream.Height
+
+	// Check for rotation metadata
+	rotation := 0
+	if len(stream.SideDataList) > 0 {
+		rotation = stream.SideDataList[0].Rotation
+	}
+
+	// Video is considered vertical if:
+	// 1. Natural portrait orientation (height > width), OR
+	// 2. Rotated 90 or 270 degrees (±90)
+	isNaturalPortrait := height > width
+	isRotatedPortrait := math.Abs(float64(rotation)) == 90
+
+	return isNaturalPortrait || isRotatedPortrait, nil
 }
