@@ -93,6 +93,15 @@ h3 { color: var(--primary); }
     border-radius: 12px;
 }
 
+.badge a {
+    color: var(--light);
+    text-decoration: none;
+}
+
+.badge a:hover {
+    text-decoration: underline;
+}
+
 .warning {
     background: #fef3c7;
     border-left: 4px solid var(--warning);
