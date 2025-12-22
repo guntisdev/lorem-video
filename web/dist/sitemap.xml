@@ -39,6 +39,16 @@
   </url>
 
   <url>
+    <loc>https://lorem.video/corgi</loc>
+    <video:video>
+      <video:thumbnail_loc>https://lorem.video/web/img/corgi-thumb.webp</video:thumbnail_loc>
+      <video:title>Corgi Dog Playing - Free Placeholder Test Video</video:title>
+      <video:description>Cute corgi dog Phoebe destroys mandarin box. Adorable sample video for testing and development purposes.</video:description>
+      <video:content_loc>https://lorem.video/corgi</video:content_loc>
+    </video:video>
+  </url>
+
+  <url>
     <loc>https://lorem.video/test</loc>
     <video:video>
       <video:thumbnail_loc>https://lorem.video/web/img/ffmpeg-test-thumb.webp</video:thumbnail_loc>

@@ -182,7 +182,7 @@ func PregenerateHLS(ctx context.Context, inputPath string) ([]string, error) {
 				Height: res.Width,
 			}
 		}
-		log.Printf("Detected vertical video %s, using portrait resolutions for HLS", filenameNoExt)
+		// log.Printf("Detected vertical video %s, using portrait resolutions for HLS", filenameNoExt)
 	}
 
 	var generatedStreams []string
