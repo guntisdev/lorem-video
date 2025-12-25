@@ -223,9 +223,12 @@
         <p>Available (fake) live streams:</p>
         <div class="grid">
             {{range .SourceVideos}}
-            <div class="card">
-                <h4>🎬 <a href="/hls/{{.}}">{{.}}</a></h4>
-                <p><strong>Usage:</strong> Include "{{.}}" after /hls/ path</p>
+            <div
+                class="card thumbnail"
+                style="background-image: url('/web/img/{{.}}-thumb.webp');"
+            >
+                <h4 class="h4bg">🎬 <a href="/hls/{{.}}">{{.}}</a></h4>
+                <p>&nbsp;</p>
             </div>
             {{end}}
         </div>
