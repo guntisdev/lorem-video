@@ -83,6 +83,18 @@ h3 { color: var(--primary); }
     color: var(--primary);
 }
 
+.thumbnail {
+    background-size: cover;
+    background-position: center;
+    background-repeat: no-repeat;
+}
+
+.h4bg {
+    background: rgba(255, 255, 255, 0.5);
+    border-radius: 4px;
+    padding: 5px 3px;
+}
+
 .badge {
     display: inline-block;
     padding: 0.2rem 0.5rem;
