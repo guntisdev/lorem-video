@@ -1,9 +1,9 @@
 
-# Lorem Video 📹
+# Lorem Video 
 
 A video placeholder service for developers. Generate test videos with custom dimensions, codecs, fps, and durations on-demand.
 
-## 🚀 Features
+## Features
 
 - **On-demand video generation** - Custom dimensions, codecs, and durations
 - **Multiple codecs/containers** - MP4, WebM, AV1, VP9, H.264, HEVC support
@@ -12,7 +12,7 @@ A video placeholder service for developers. Generate test videos with custom dim
 - **Developer friendly** - CORS `"Access-Control-Allow-Origin", "*"`
 - **Built-in analytics** - Stats from rest endpoints
 
-## 🛠️ Quick Start
+## Quick Start
 
 ### Docker (Recommended)
 ```bash
@@ -31,7 +31,7 @@ task run
 task build
 ```
 
-## 📊 API Usage
+## API Usage
 
 ### Generate Video
 ```
@@ -39,6 +39,11 @@ GET /{width}x{height}_{duration}s_{codec}_{quality}
 GET /800x600_30s_h264_25crf        # H.264 video
 GET /1920x1080_60s_vp9_23crf       # VP9 video
 GET /bunny                         # Default test video
+```
+
+### HLS Video
+```
+GET /hls/{filename}
 ```
 
 ### Get Video Info
@@ -54,12 +59,13 @@ GET /sitemap.xml
 GET /robots.txt
 ```
 
-## 🧰 Development
+## Development
 
 ### Data Directories
 - `/data/video/` - Generated video cache
-- `/data/logs/` - Daily stats logs (JSONL format)
-- `/data/errors/` - Error logs (created only when errors occur)
+- `/data/logs/stats/` - Daily stats logs (JSONL format)
+- `/data/logs/errors/` - Error logs (created only when errors occur)
+- `/data/logs/bots/` - Filter out bots from real users and store bot stats
 - `/data/tmp/` - Temporary transcoding files
 - `/data/sourceVideo/` - Source video files (bunny.mp4)
 
@@ -73,7 +79,7 @@ task test:integration # Run integration tests (requires FFmpeg)
 task deps             # Download and tidy dependencies
 ```
 
-### FFmpeg commands
+### Useful FFmpeg commands
 ```bash
 // source file duration
 ffprobe -v error -show_entries format=duration -of default=noprint_wrappers=1:nokey=1 input.mp4
@@ -105,7 +111,7 @@ Common combinations are generated at startup:
 - Duration 20s
 
 
-## 📈 Statistics
+## Statistics
 
 ### Getting started
 Build binary and then run it
@@ -122,6 +128,7 @@ task build:stats
 `--max-date` - Filter until this date (YYYY-MM-DD format)\
 `--top` (default: 20) - Number of top results to show\
 `--full-ua` - Show full user agent strings instead of browser summary
+`--bots` - Show bot stats instead of real users
 
 ### Usage Examples
 Basic Analysis (All Data)\
@@ -137,18 +144,10 @@ Include Partial Content Requests\
 Comprehensive Analysis (Show Everything)\
 `./bin/stats -exclude-static=false -exclude-partial=false -top 50`
 
-## 🤝 Contributing
-
-1. Fork the repository
-2. Create a feature branch
-3. Make your changes
-4. Run tests: `task test`
-5. Submit a pull request
-
-## 📄 License
+## License
 
 MIT License - see LICENSE file for details
 
-## 🌐 Live Service
+## Live Service
 
 Visit [lorem.video](https://lorem.video) for the hosted version with full documentation and examples.
