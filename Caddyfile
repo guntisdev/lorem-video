@@ -1,11 +1,23 @@
 {
+    crowdsec {
+        api_url {$CROWDSEC_API_URL}
+        api_key {$CROWDSEC_API_KEY}
+    }
+
     log {
         level WARN
     }
 }
 
 lorem.video {
-    reverse_proxy app:3000
+    log {
+        output file /var/log/caddy/access.log
+    }
+
+    route {
+        crowdsec
+        reverse_proxy app:3000
+    }
 }
 
 www.lorem.video {

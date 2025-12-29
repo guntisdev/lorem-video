@@ -12,14 +12,30 @@ services:
       - web
 
   caddy:
-    image: caddy:alpine
+    image: ghcr.io/serfriz/caddy-crowdsec:latest
     ports:
-      - "80:80"    # HTTP (redirects to HTTPS)
-      - "443:443"  # HTTPS
+      - "80:80"
+      - "443:443"
+    environment:
+      - CROWDSEC_API_KEY=${CROWDSEC_API_KEY}
+      - CROWDSEC_API_URL=${CROWDSEC_API_URL}
     volumes:
       - ./Caddyfile:/etc/caddy/Caddyfile
       - caddy_data:/data
       - caddy_config:/config
+      - caddy_logs:/var/log/caddy # Shared logs for CrowdSec to read
+    restart: unless-stopped
+    networks:
+      - web
+
+  crowdsec:
+    image: crowdsecurity/crowdsec:latest
+    environment:
+      - COLLECTIONS=crowdsecurity/caddy crowdsecurity/http-crawlers crowdsecurity/whitelist-good-actors
+    volumes:
+      - caddy_logs:/var/log/caddy:ro         # Read-only access to Caddy logs
+      - crowdsec_data:/var/lib/crowdsec/data
+      - crowdsec_config:/etc/crowdsec
     restart: unless-stopped
     networks:
       - web
@@ -30,3 +46,6 @@ networks:
 volumes:
   caddy_data:
   caddy_config:
+  caddy_logs:
+  crowdsec_data:
+  crowdsec_config:
