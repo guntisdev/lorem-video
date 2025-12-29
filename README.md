@@ -144,6 +144,15 @@ Include Partial Content Requests\
 Comprehensive Analysis (Show Everything)\
 `./bin/stats -exclude-static=false -exclude-partial=false -top 50`
 
+## CrowdSec
+`docker compose exec crowdsec cscli metrics` - Acquisition Metrics\
+`docker compose exec crowdsec cscli alerts list` - History of security incidents\
+`docker compose exec crowdsec cscli hub list` -	Shows which security "rules" (collections/parsers) are installed and active\
+
+`docker compose exec crowdsec cscli decisions list` - IPs server caught and banned locally\
+`docker compose exec crowdsec cscli decisions list --all` - local bans plus the thousands of IPs from the community blocklist\
+`docker compose exec crowdsec cscli bouncers list`	Verifies Caddy bouncer is still connected and "pulling" updates.
+
 ## License
 
 MIT License - see LICENSE file for details
