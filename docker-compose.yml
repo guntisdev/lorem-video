@@ -36,6 +36,7 @@ services:
     environment:
       - COLLECTIONS=crowdsecurity/caddy crowdsecurity/base-http-scenarios crowdsecurity/whitelist-good-actors
     volumes:
+      - ./acquis.yaml:/etc/crowdsec/acquis.yaml
       - caddy_logs:/var/log/caddy:ro         # Read-only access to Caddy logs
       - crowdsec_data:/var/lib/crowdsec/data
       - crowdsec_config:/etc/crowdsec
