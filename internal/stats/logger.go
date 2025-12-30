@@ -2,6 +2,7 @@ package stats
 
 import (
 	"bufio"
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"net"
@@ -120,6 +121,8 @@ func StatsMiddleware(logPath string) func(http.Handler) http.Handler {
 			fmt.Printf("Warning: Failed to create stats logger: %v\n", err)
 		}
 
+		gcClient := &http.Client{Timeout: 3 * time.Second}
+
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			start := time.Now()
 
@@ -133,15 +136,7 @@ func StatsMiddleware(logPath string) func(http.Handler) http.Handler {
 
 			responseTime := time.Since(start).Milliseconds()
 
-			ipAddress := r.RemoteAddr
-			if forwarded := r.Header.Get("X-Forwarded-For"); forwarded != "" {
-				ipAddress = strings.Split(forwarded, ",")[0]
-			} else if realIP := r.Header.Get("X-Real-IP"); realIP != "" {
-				ipAddress = realIP
-			}
-			if host, _, err := net.SplitHostPort(ipAddress); err == nil {
-				ipAddress = host
-			}
+			ipAddress := getRealIP(r)
 
 			stats := RequestStats{
 				Timestamp:    start,
@@ -161,6 +156,79 @@ func StatsMiddleware(logPath string) func(http.Handler) http.Handler {
 					fmt.Printf("Warning: Failed to log request stats: %v\n", err)
 				}
 			}
+
+			if !shouldSkipPath(r.URL.Path) {
+				sendToGoatCounter(gcClient, r, ipAddress)
+			}
 		})
 	}
+}
+
+type GoatCounterHit struct {
+	Path     string `json:"p"`
+	Title    string `json:"t,omitempty"`
+	Referrer string `json:"r,omitempty"`
+	Event    bool   `json:"e,omitempty"`
+	Query    string `json:"q,omitempty"`
+	Size     []int  `json:"s,omitempty"` // [width, height, scale]
+}
+
+func sendToGoatCounter(client *http.Client, r *http.Request, ip string) {
+	goatcounterURL := os.Getenv("GOATCOUNTER_URL")
+	if goatcounterURL == "" {
+		goatcounterURL = "http://goatcounter:8081"
+	}
+
+	hit := GoatCounterHit{
+		Path:     r.URL.Path,
+		Referrer: r.Referer(),
+	}
+
+	data, err := json.Marshal([]GoatCounterHit{hit})
+	if err != nil {
+		return
+	}
+
+	req, err := http.NewRequest("POST",
+		goatcounterURL+"/api/v0/count",
+		bytes.NewBuffer(data))
+	if err != nil {
+		return
+	}
+
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("User-Agent", r.UserAgent())
+	req.Header.Set("X-Forwarded-For", ip)
+
+	resp, err := client.Do(req)
+	if err != nil {
+		return
+	}
+	defer resp.Body.Close()
+}
+
+func getRealIP(r *http.Request) string {
+	ipAddress := r.RemoteAddr
+	if forwarded := r.Header.Get("X-Forwarded-For"); forwarded != "" {
+		ipAddress = strings.Split(forwarded, ",")[0]
+	} else if realIP := r.Header.Get("X-Real-IP"); realIP != "" {
+		ipAddress = realIP
+	}
+	if host, _, err := net.SplitHostPort(ipAddress); err == nil {
+		ipAddress = host
+	}
+	return strings.TrimSpace(ipAddress)
+}
+
+func shouldSkipPath(path string) bool {
+	skipPrefixes := []string{
+		"/web/", "/favicon.ico",
+		"/health", "/ping",
+	}
+	for _, prefix := range skipPrefixes {
+		if strings.HasPrefix(path, prefix) {
+			return true
+		}
+	}
+	return false
 }

@@ -23,3 +23,10 @@ lorem.video {
 www.lorem.video {
     redir https://lorem.video{uri}
 }
+
+stats.lorem.video {
+    route {
+        crowdsec
+        reverse_proxy goatcounter:8081
+    }
+}
