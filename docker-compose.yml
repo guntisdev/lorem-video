@@ -3,7 +3,7 @@ services:
     build: .
     environment:
       - BASE_URL=https://lorem.video
-      - GOATCOUNTER_URL=http://goatcounter:8081
+      - GOATCOUNTER_URL=http://goatcounter:8082
     expose:
       - "3000"
     restart: unless-stopped
@@ -17,10 +17,12 @@ services:
   goatcounter:
     image: docker.io/arp242/goatcounter:latest
     expose:
-      - "8081"
+      - "8082"
+    ports:
+      - "${GOAT_PORT_DEV:-127.0.0.1:8082}:8082"
     volumes:
       - goatcounter-data:/goatcounter
-    command: serve -listen :8081 -tls none -db sqlite+/goatcounter/db.sqlite3
+    command: serve -listen :8082 -tls none -db sqlite+/goatcounter/db.sqlite3
     restart: unless-stopped
     networks:
       - web

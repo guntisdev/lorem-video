@@ -176,7 +176,7 @@ type GoatCounterHit struct {
 func sendToGoatCounter(client *http.Client, r *http.Request, ip string) {
 	goatcounterURL := os.Getenv("GOATCOUNTER_URL")
 	if goatcounterURL == "" {
-		goatcounterURL = "http://goatcounter:8081"
+		goatcounterURL = "http://goatcounter:8082"
 	}
 
 	hit := GoatCounterHit{
