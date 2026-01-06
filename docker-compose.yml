@@ -19,7 +19,7 @@ services:
     expose:
       - "8082"
     ports:
-      - "${GOAT_PORT_DEV:-127.0.0.1:8082}:8082"
+      - "127.0.0.1:8082:8082"
     volumes:
       - goatcounter-data:/goatcounter
     command: serve -listen :8082 -tls none -db sqlite+/goatcounter/db.sqlite3
@@ -31,13 +31,16 @@ services:
     image: ghcr.io/serfriz/caddy-crowdsec:latest
     depends_on:
       crowdsec:
-        condition: service_started
+        condition: service_healthy
     ports:
-      - "80:80"
-      - "443:443"
+      - "8080:8080"
+      - "${HTTPS_PORT:-443}:443"
     environment:
       - CROWDSEC_API_KEY=${CROWDSEC_API_KEY}
       - CROWDSEC_API_URL=${CROWDSEC_API_URL}
+      - DOMAIN=${DOMAIN}
+      - DOMAIN_WWW=${DOMAIN_WWW}
+      - DOMAIN_STATS=${DOMAIN_STATS}
     volumes:
       - ./Caddyfile:/etc/caddy/Caddyfile
       - caddy_data:/data
@@ -51,11 +54,17 @@ services:
     image: crowdsecurity/crowdsec:latest
     environment:
       - COLLECTIONS=crowdsecurity/caddy crowdsecurity/base-http-scenarios crowdsecurity/whitelist-good-actors
+      - LEVEL_ERROR=true
     volumes:
       - ./acquis.yaml:/etc/crowdsec/acquis.yaml
-      - caddy_logs:/var/log/caddy:ro         # Read-only access to Caddy logs
+      - caddy_logs:/var/log/caddy:ro
       - crowdsec_data:/var/lib/crowdsec/data
       - crowdsec_config:/etc/crowdsec
+    healthcheck:
+      test: ["CMD", "cscli", "version"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
     restart: unless-stopped
     networks:
       - web

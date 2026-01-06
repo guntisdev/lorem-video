@@ -145,6 +145,17 @@ Comprehensive Analysis (Show Everything)\
 `./bin/stats -exclude-static=false -exclude-partial=false -top 50`
 
 ## CrowdSec
+### Local .env
+```env
+    CROWDSEC_API_KEY=dev_key_length_32_characters_123
+    CROWDSEC_API_URL=http://crowdsec:8080
+```
+### Register bouncer (locally)
+After running `docker compose up --build`, you must register local dummy key inside CrowdSec container:
+```bash
+docker compose exec crowdsec cscli bouncers add caddy-bouncer --key dev_key_length_32_characters_123
+```
+### Crowdsec commands
 `docker compose exec crowdsec cscli metrics` - Acquisition Metrics\
 `docker compose exec crowdsec cscli alerts list` - History of security incidents\
 `docker compose exec crowdsec cscli hub list` -	Shows which security "rules" (collections/parsers) are installed and active\
