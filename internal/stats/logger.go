@@ -165,12 +165,17 @@ func StatsMiddleware(logPath string) func(http.Handler) http.Handler {
 }
 
 type GoatCounterHit struct {
-	Path     string `json:"p"`
-	Title    string `json:"t,omitempty"`
-	Referrer string `json:"r,omitempty"`
-	Event    bool   `json:"e,omitempty"`
-	Query    string `json:"q,omitempty"`
-	Size     []int  `json:"s,omitempty"` // [width, height, scale]
+	Path     string `json:"path"`
+	Title    string `json:"title,omitempty"`
+	Referrer string `json:"ref,omitempty"`
+	Event    bool   `json:"event,omitempty"`
+	Query    string `json:"query,omitempty"`
+	Size     []int  `json:"size,omitempty"` // [width, height, scale]
+}
+
+type GoatCounterRequest struct {
+	Hits       []GoatCounterHit `json:"hits"`
+	NoSessions bool             `json:"no_sessions,omitempty"`
 }
 
 func sendToGoatCounter(client *http.Client, r *http.Request, ip string) {
@@ -179,12 +184,23 @@ func sendToGoatCounter(client *http.Client, r *http.Request, ip string) {
 		goatcounterURL = "http://goatcounter:8082"
 	}
 
+	token := os.Getenv("GOATCOUNTER_TOKEN")
+	if token == "" {
+		// Skip sending if no token is configured
+		return
+	}
+
 	hit := GoatCounterHit{
 		Path:     r.URL.Path,
 		Referrer: r.Referer(),
 	}
 
-	data, err := json.Marshal([]GoatCounterHit{hit})
+	request := GoatCounterRequest{
+		Hits:       []GoatCounterHit{hit},
+		NoSessions: true, // Allow tracking without sessions since we're on the backend
+	}
+
+	data, err := json.Marshal(request)
 	if err != nil {
 		return
 	}
@@ -197,6 +213,7 @@ func sendToGoatCounter(client *http.Client, r *http.Request, ip string) {
 	}
 
 	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Authorization", "Bearer "+token)
 	req.Header.Set("User-Agent", r.UserAgent())
 	req.Header.Set("X-Forwarded-For", ip)
 
@@ -205,6 +222,11 @@ func sendToGoatCounter(client *http.Client, r *http.Request, ip string) {
 		return
 	}
 	defer resp.Body.Close()
+
+	// Log errors for debugging
+	if resp.StatusCode >= 400 {
+		fmt.Printf("GoatCounter API error: %d %s\n", resp.StatusCode, resp.Status)
+	}
 }
 
 func getRealIP(r *http.Request) string {

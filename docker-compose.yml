@@ -4,6 +4,7 @@ services:
     environment:
       - BASE_URL=https://lorem.video
       - GOATCOUNTER_URL=http://goatcounter:8082
+      - GOATCOUNTER_TOKEN=${GOATCOUNTER_TOKEN}
     expose:
       - "3000"
     restart: unless-stopped
