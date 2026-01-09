@@ -165,12 +165,14 @@ func StatsMiddleware(logPath string) func(http.Handler) http.Handler {
 }
 
 type GoatCounterHit struct {
-	Path     string `json:"path"`
-	Title    string `json:"title,omitempty"`
-	Referrer string `json:"ref,omitempty"`
-	Event    bool   `json:"event,omitempty"`
-	Query    string `json:"query,omitempty"`
-	Size     []int  `json:"size,omitempty"` // [width, height, scale]
+	Path      string `json:"path"`
+	Title     string `json:"title,omitempty"`
+	Referrer  string `json:"ref,omitempty"`
+	Event     bool   `json:"event,omitempty"`
+	Query     string `json:"query,omitempty"`
+	Size      []int  `json:"size,omitempty"` // [width, height, scale]
+	UserAgent string `json:"user_agent,omitempty"`
+	IP        string `json:"ip,omitempty"`
 }
 
 type GoatCounterRequest struct {
@@ -191,8 +193,10 @@ func sendToGoatCounter(client *http.Client, r *http.Request, ip string) {
 	}
 
 	hit := GoatCounterHit{
-		Path:     r.URL.Path,
-		Referrer: r.Referer(),
+		Path:      r.URL.Path,
+		Referrer:  r.Referer(),
+		UserAgent: r.UserAgent(),
+		IP:        ip,
 	}
 
 	request := GoatCounterRequest{
