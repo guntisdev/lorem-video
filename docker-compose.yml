@@ -22,8 +22,8 @@ services:
     ports:
       - "127.0.0.1:8082:8082"
     volumes:
-      - goatcounter-data:/goatcounter
-    command: serve -listen :8082 -tls none -db sqlite+/goatcounter/db.sqlite3
+      - goatcounter-data:/home/goatcounter/goatcounter-data
+    command: serve -listen :8082 -tls none -db sqlite+/home/goatcounter/goatcounter-data/db.sqlite3
     restart: unless-stopped
     networks:
       - web
@@ -46,7 +46,7 @@ services:
       - ./Caddyfile:/etc/caddy/Caddyfile
       - caddy_data:/data
       - caddy_config:/config
-      - caddy_logs:/var/log/caddy # Shared logs for CrowdSec to read
+      - caddy_logs:/var/log/caddy
     restart: unless-stopped
     networks:
       - web
