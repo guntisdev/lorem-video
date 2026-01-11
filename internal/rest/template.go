@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"path/filepath"
 	"strings"
+	"time"
 
 	"lorem.video/internal/config"
 )
@@ -14,6 +15,7 @@ import (
 type TemplateData struct {
 	Domain       string
 	Version      string
+	CurrentYear  int
 	VideoCodecs  []string
 	AudioCodecs  []string
 	Containers   []string
@@ -56,6 +58,7 @@ func (rest *Rest) ServeDocumentation(w http.ResponseWriter, r *http.Request) {
 	data := TemplateData{
 		Domain:       "lorem.video",
 		Version:      rest.appVersion, // for caching
+		CurrentYear:  time.Now().Year(),
 		VideoCodecs:  config.ValidVideoCodecs,
 		AudioCodecs:  config.ValidAudioCodecs,
 		Containers:   config.ValidContainers,
