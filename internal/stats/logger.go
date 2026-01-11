@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"regexp"
 	"strings"
 	"sync"
 	"time"
@@ -250,10 +251,10 @@ func getRealIP(r *http.Request) string {
 
 func shouldSkipPath(path string) bool {
 	skipExtensions := []string{
-		".ico", ".css", ".svg", ".js", ".webp", ".gif",
+		// IMPORTANT not to add .mp4 .webm (both are valid inputs from user)
+		".ico", ".css", ".svg", ".js", ".webp", ".gif", ".m3u8", ".json",
 	}
 
-	// Extract file extension from path
 	if lastDot := strings.LastIndex(path, "."); lastDot != -1 {
 		ext := strings.ToLower(path[lastDot:])
 		for _, skipExt := range skipExtensions {
@@ -262,5 +263,12 @@ func shouldSkipPath(path string) bool {
 			}
 		}
 	}
+
+	// don't log HLS media chunks
+	hlsPattern := regexp.MustCompile(`/media\.\d+\.mp4$`)
+	if hlsPattern.MatchString(path) {
+		return true
+	}
+
 	return false
 }

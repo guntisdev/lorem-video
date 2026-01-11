@@ -24,7 +24,6 @@ func (rest *Rest) BotsMiddleware(next http.Handler) http.Handler {
 			"/.git",
 			"/.env",
 			"/.htaccess",
-			"/.well-known",
 			"/passwd",
 			"/.aws",
 			"/phpmyadmin",
@@ -32,6 +31,7 @@ func (rest *Rest) BotsMiddleware(next http.Handler) http.Handler {
 			"/compoments.js", // yes misspelled compoments from real stats
 			"/admin",
 			"/login",
+			"/wiki",
 			"/cgi-bin",
 		}
 
