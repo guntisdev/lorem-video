@@ -94,6 +94,11 @@ func (rest *Rest) ServeVideo(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	if *inputParams == (config.VideoSpec{}) {
+		http.Error(w, "no valid parameters found", http.StatusNotFound)
+		return
+	}
+
 	spec := config.ApplyDefaultVideoSpec(inputParams)
 	filename := parser.GenerateFilename(&spec)
 
