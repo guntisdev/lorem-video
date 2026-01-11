@@ -24,9 +24,15 @@ func (rest *Rest) BotsMiddleware(next http.Handler) http.Handler {
 			"/.git",
 			"/.env",
 			"/.htaccess",
+			"/.well-known",
 			"/passwd",
 			"/.aws",
 			"/phpmyadmin",
+			"/umi.js",
+			"/compoments.js", // yes misspelled compoments from real stats
+			"/admin",
+			"/login",
+			"/cgi-bin",
 		}
 
 		for _, pattern := range botPatterns {
