@@ -134,6 +134,10 @@ func StatsMiddleware(logPath string) func(http.Handler) http.Handler {
 
 			next.ServeHTTP(rw, r)
 
+			if shouldSkipPath(r.URL.Path) {
+				return
+			}
+
 			responseTime := time.Since(start).Milliseconds()
 
 			ipAddress := getRealIP(r)
@@ -157,9 +161,7 @@ func StatsMiddleware(logPath string) func(http.Handler) http.Handler {
 				}
 			}
 
-			if !shouldSkipPath(r.URL.Path) {
-				sendToGoatCounter(gcClient, r, ipAddress)
-			}
+			sendToGoatCounter(gcClient, r, ipAddress)
 		})
 	}
 }
@@ -247,13 +249,17 @@ func getRealIP(r *http.Request) string {
 }
 
 func shouldSkipPath(path string) bool {
-	skipPrefixes := []string{
-		"/web/", "/favicon.ico",
-		"/health", "/ping",
+	skipExtensions := []string{
+		".ico", ".css", ".svg", ".js", ".webp", ".gif",
 	}
-	for _, prefix := range skipPrefixes {
-		if strings.HasPrefix(path, prefix) {
-			return true
+
+	// Extract file extension from path
+	if lastDot := strings.LastIndex(path, "."); lastDot != -1 {
+		ext := strings.ToLower(path[lastDot:])
+		for _, skipExt := range skipExtensions {
+			if ext == skipExt {
+				return true
+			}
 		}
 	}
 	return false
