@@ -51,7 +51,7 @@
   <url>
     <loc>https://lorem.video/test</loc>
     <video:video>
-      <video:thumbnail_loc>https://lorem.video/web/img/ffmpeg-test-thumb.webp</video:thumbnail_loc>
+      <video:thumbnail_loc>https://lorem.video/web/img/test-thumb.webp</video:thumbnail_loc>
       <video:title>FFmpeg Test Video - Color Bars Placeholder</video:title>
       <video:description>FFmpeg test pattern video with color bars. Ideal for testing video codecs, players, and streaming setups.</video:description>
       <video:content_loc>https://lorem.video/test</video:content_loc>
