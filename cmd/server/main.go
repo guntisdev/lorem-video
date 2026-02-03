@@ -35,7 +35,7 @@ func main() {
 	mux.HandleFunc("GET /{params}", rest.ServeVideo)
 
 	statsMiddleware := stats.StatsMiddleware(config.AppPaths.LogsStats)
-	handler := rest.RecoveryMiddleware(rest.BotsMiddleware(statsMiddleware(rest.CORSMiddleware(mux))))
+	handler := rest.RecoveryMiddleware(statsMiddleware(rest.BotsMiddleware(rest.CORSMiddleware(mux))))
 
 	log.Printf("Server starting on port %d...", config.Port)
 	if err := http.ListenAndServe(fmt.Sprintf(":%d", config.Port), handler); err != nil {
