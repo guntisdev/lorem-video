@@ -3,11 +3,10 @@ FROM golang:1.24-alpine AS builder
 WORKDIR /app
 COPY go.mod go.sum ./
 RUN go mod download
-#COPY . .
 COPY cmd/ ./cmd/
 COPY internal/ ./internal/
 COPY web/ ./web/
-# RUN ls -laR /app  # <-- Add this line to see everything
+# RUN ls -laR /app  # list files
 RUN CGO_ENABLED=0 GOOS=linux go build -o lorem-video ./cmd/server/
 
 # Runtime stage

@@ -10,6 +10,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"strings"
+	"syscall"
 
 	"lorem.video/internal/config"
 	"lorem.video/internal/parser"
@@ -95,6 +96,9 @@ func (s *VideoService) Transcode(ctx context.Context, spec config.VideoSpec, inp
 		defer close(errCh)
 
 		args := []string{
+			"-y",                   // overwrite output files
+			"-loglevel", "warning", // reduce log verbosity
+			"-threads", "2", // limit CPU threads for VPS
 			"-i", inputPath,
 			"-t", fmt.Sprintf("%d", spec.Duration),
 			"-vf", fmt.Sprintf("scale=%d:%d:force_original_aspect_ratio=increase,crop=%d:%d",
@@ -152,12 +156,25 @@ func (s *VideoService) Transcode(ctx context.Context, spec config.VideoSpec, inp
 
 		cmd := exec.CommandContext(ctx, "ffmpeg", args...)
 
+		// Add resource limits for VPS environments
+		cmd.SysProcAttr = &syscall.SysProcAttr{
+			Setpgid: true, // Create new process group for better cleanup
+		}
+
 		var stderr bytes.Buffer
 		cmd.Stderr = &stderr
 
 		if err := cmd.Run(); err != nil {
 			log.Printf("FFmpeg failed with error: %v", err)
 			log.Printf("FFmpeg stderr output: %s", stderr.String())
+
+			// Clean up partial file on failure
+			if _, statErr := os.Stat(fullOutputPath); statErr == nil {
+				if removeErr := os.Remove(fullOutputPath); removeErr != nil {
+					log.Printf("Failed to clean up partial file: %v", removeErr)
+				}
+			}
+
 			errCh <- fmt.Errorf("ffmpeg failed: %w\nOutput: %s", err, stderr.String())
 			return
 		}
