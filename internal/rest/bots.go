@@ -1,15 +1,21 @@
 package rest
 
 import (
+	"fmt"
+	"log"
 	"net/http"
 	"strings"
+	"time"
 
 	"lorem.video/internal/config"
 	"lorem.video/internal/stats"
 )
 
 func (rest *Rest) BotsMiddleware(next http.Handler) http.Handler {
-	botStatsMiddleware := stats.StatsMiddleware(config.AppPaths.LogsBots)
+	botLogger, err := stats.NewStatsLogger(config.AppPaths.LogsBots)
+	if err != nil {
+		log.Printf("Warning: Failed to create bot logger: %v", err)
+	}
 
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		url := strings.ToLower(r.URL.Path)
@@ -37,11 +43,28 @@ func (rest *Rest) BotsMiddleware(next http.Handler) http.Handler {
 
 		for _, pattern := range botPatterns {
 			if strings.Contains(url, pattern) {
-				// Log the bot request with 404 status using the bot stats middleware
-				botHandler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-					http.NotFound(w, r)
-				})
-				botStatsMiddleware(botHandler).ServeHTTP(w, r)
+				if botLogger != nil {
+					start := time.Now()
+					stats := stats.RequestStats{
+						Timestamp:    start,
+						Method:       r.Method,
+						Path:         r.URL.Path,
+						IP:           r.RemoteAddr,
+						Referer:      r.Header.Get("Referer"),
+						UserAgent:    r.Header.Get("User-Agent"),
+						Status:       http.StatusNotFound,
+						ResponseTime: 0, // Immediate response
+						ResponseSize: 0,
+						ContentType:  "text/plain",
+					}
+
+					if err := botLogger.Log(stats); err != nil {
+						fmt.Printf("Warning: Failed to log bot request: %v\n", err)
+					}
+				}
+
+				// Return 404 without going to next handler
+				http.NotFound(w, r)
 				return
 			}
 		}
