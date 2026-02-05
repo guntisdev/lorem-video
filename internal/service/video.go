@@ -154,7 +154,9 @@ func (s *VideoService) Transcode(ctx context.Context, spec config.VideoSpec, inp
 
 		args = append(args, fullOutputPath)
 
-		cmd := exec.CommandContext(ctx, "ffmpeg", args...)
+		// Use nice to lower process priority for background video generation
+		niceArgs := append([]string{"-n", "10", "ffmpeg"}, args...)
+		cmd := exec.CommandContext(ctx, "nice", niceArgs...)
 
 		// Add resource limits for VPS environments
 		cmd.SysProcAttr = &syscall.SysProcAttr{
