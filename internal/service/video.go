@@ -98,7 +98,7 @@ func (s *VideoService) Transcode(ctx context.Context, spec config.VideoSpec, inp
 		args := []string{
 			"-y",                   // overwrite output files
 			"-loglevel", "warning", // reduce log verbosity
-			"-threads", "2", // limit CPU threads for VPS
+			"-threads", "1", // use only 1 thread to leave CPU for serving requests
 			"-i", inputPath,
 			"-t", fmt.Sprintf("%d", spec.Duration),
 			"-vf", fmt.Sprintf("scale=%d:%d:force_original_aspect_ratio=increase,crop=%d:%d",
