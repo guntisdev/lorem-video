@@ -183,12 +183,7 @@ func FindExistingVideo(filename string, spec *config.VideoSpec) string {
 
 	// Search in tmp folder
 	tmpPath := filepath.Join(config.AppPaths.Tmp, filename)
-	if stat, err := os.Stat(tmpPath); err == nil {
-		// delete corrupted file (cause too small)
-		if stat.Size() <= 1024 {
-			os.Remove(tmpPath)
-			return ""
-		}
+	if _, err := os.Stat(tmpPath); err == nil {
 		return tmpPath
 	}
 
