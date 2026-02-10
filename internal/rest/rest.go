@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"io"
 	"log"
 	"net/http"
 	"os"
@@ -108,12 +107,27 @@ func (rest *Rest) ServeVideo(w http.ResponseWriter, r *http.Request) {
 		ext := strings.TrimPrefix(filepath.Ext(existingPath), ".")
 		w.Header().Set("Accept-Ranges", "bytes")
 		w.Header().Set("Content-Type", "video/"+ext)
+
+		// Check if video is less than 5 minutes old to avoid caching partial transcodes
+		if stat, err := os.Stat(existingPath); err == nil {
+			fileAge := time.Since(stat.ModTime())
+			if fileAge < 5*time.Minute {
+				// Video is recent, might be partial - don't cache
+				w.Header().Set("Cache-Control", "no-cache, no-store, must-revalidate")
+				w.Header().Set("Pragma", "no-cache")
+				w.Header().Set("Expires", "0")
+			} else {
+				// Video is older, safe to cache
+				w.Header().Set("Cache-Control", "public, max-age=3600") // 1 hour cache
+			}
+		}
+
 		http.ServeFile(w, r, existingPath)
 		return
 	}
 
-	// Video not found, need to generate and stream it
-	log.Printf("Video not found, generating and streaming: %s", filename)
+	// Video not found, start transcoding and tell client to retry
+	log.Printf("Starting transcoding for: %s", filename)
 
 	// TODO hardcoded .mp4 extension for source video. should be improved later
 	inputPath := filepath.Join(config.AppPaths.SourceVideo, spec.Name+".mp4")
@@ -122,142 +136,19 @@ func (rest *Rest) ServeVideo(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Start transcoding in background with independent context
-	// This ensures transcoding continues even if HTTP request is canceled
+	// Start transcoding in background
 	backgroundCtx := context.Background()
-	fullOutputPath := filepath.Join(config.AppPaths.Tmp, filename)
-	resultCh, errCh := rest.videoService.Transcode(backgroundCtx, spec, inputPath, config.AppPaths.Tmp)
+	_, _ = rest.videoService.Transcode(backgroundCtx, spec, inputPath, config.AppPaths.Tmp)
 
-	// Set headers for partial streaming (no caching to avoid incomplete content)
-	ext := strings.TrimPrefix(filepath.Ext(fullOutputPath), ".")
-	w.Header().Set("Content-Type", "video/"+ext)
+	// Return 202 Accepted with retry instructions
 	w.Header().Set("Cache-Control", "no-cache, no-store, must-revalidate")
-	w.Header().Set("Pragma", "no-cache")
-	w.Header().Set("Expires", "0")
-	w.WriteHeader(http.StatusOK)
+	w.Header().Set("Retry-After", "5")
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusAccepted)
 
-	// Stream the partial file while it's being generated
-	// Use request context for streaming, but transcoding uses background context
-	rest.streamPartialFile(w, r.Context(), fullOutputPath, resultCh, errCh)
-}
-
-// streamPartialFile streams a file that's being written by FFmpeg
-// Uses requestCtx to detect client disconnection, but allows transcoding to continue
-func (rest *Rest) streamPartialFile(w http.ResponseWriter, requestCtx context.Context, filePath string, resultCh <-chan string, errCh <-chan error) {
-	// Wait a moment for FFmpeg to start writing the file
-	time.Sleep(100 * time.Millisecond)
-
-	var file *os.File
-	var lastPos int64 = 0
-
-	// Try to open the file, wait if it doesn't exist yet
-	for i := 0; i < 50; i++ { // Wait up to 5 seconds
-		if f, err := os.Open(filePath); err == nil {
-			file = f
-			break
-		}
-		time.Sleep(100 * time.Millisecond)
-	}
-
-	if file == nil {
-		log.Printf("Failed to open partial file for streaming: %s", filePath)
-		return
-	}
-	defer file.Close()
-
-	buffer := make([]byte, 64*1024) // 64KB buffer
-
-	for {
-		// Check if request was canceled (client disconnected)
-		select {
-		case <-requestCtx.Done():
-			log.Printf("Client disconnected, but transcoding continues in background")
-			file.Close()
-			return
-		default:
-		}
-
-		// Check if transcoding is complete or failed
-		select {
-		case <-resultCh:
-			// Transcoding completed, stream the rest of the file if client still connected
-			select {
-			case <-requestCtx.Done():
-				log.Printf("Client disconnected after transcoding completed")
-				file.Close()
-				return
-			default:
-				rest.streamRemainingFile(w, file, &lastPos, buffer)
-				return
-			}
-		case err := <-errCh:
-			log.Printf("Transcoding failed during streaming: %v", err)
-			return
-		default:
-			// Continue streaming partial content
-		}
-
-		// Read new content from the current position
-		stat, err := file.Stat()
-		if err != nil {
-			log.Printf("Failed to stat file during streaming: %v", err)
-			return
-		}
-
-		if stat.Size() > lastPos {
-			// New content available
-			file.Seek(lastPos, 0)
-			n, err := file.Read(buffer)
-			if err != nil && err != io.EOF {
-				log.Printf("Failed to read file during streaming: %v", err)
-				return
-			}
-			if n > 0 {
-				// Check if client is still connected before writing
-				select {
-				case <-requestCtx.Done():
-					log.Printf("Client disconnected during write")
-					file.Close()
-					return
-				default:
-				}
-
-				if _, err := w.Write(buffer[:n]); err != nil {
-					log.Printf("Failed to write to response during streaming (client likely disconnected): %v", err)
-					return
-				}
-				if flusher, ok := w.(http.Flusher); ok {
-					flusher.Flush()
-				}
-				lastPos += int64(n)
-			}
-		}
-
-		// Small delay to avoid busy waiting
-		time.Sleep(50 * time.Millisecond)
-	}
-}
-
-// streamRemainingFile streams any remaining content after transcoding completes
-func (rest *Rest) streamRemainingFile(w http.ResponseWriter, file *os.File, lastPos *int64, buffer []byte) {
-	file.Seek(*lastPos, 0)
-	for {
-		n, err := file.Read(buffer)
-		if n > 0 {
-			if _, writeErr := w.Write(buffer[:n]); writeErr != nil {
-				log.Printf("Failed to write remaining content: %v", writeErr)
-				return
-			}
-			if flusher, ok := w.(http.Flusher); ok {
-				flusher.Flush()
-			}
-		}
-		if err == io.EOF {
-			break
-		}
-		if err != nil {
-			log.Printf("Error reading remaining content: %v", err)
-			return
-		}
-	}
+	json.NewEncoder(w).Encode(map[string]string{
+		"status":      "transcoding",
+		"message":     "Video is being generated. Please retry this URL in a few moments.",
+		"retry_after": "5",
+	})
 }
