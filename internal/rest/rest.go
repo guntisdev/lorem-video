@@ -99,6 +99,12 @@ func (rest *Rest) ServeVideo(w http.ResponseWriter, r *http.Request) {
 	}
 
 	spec := config.ApplyDefaultVideoSpec(inputParams)
+
+	if err := config.ValidateContainerCompatibility(&spec); err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
 	filename := parser.GenerateFilename(&spec)
 
 	// Check for existing video

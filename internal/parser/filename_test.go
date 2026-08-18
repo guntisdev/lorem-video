@@ -64,6 +64,22 @@ func TestParseFilename(t *testing.T) {
 			},
 		},
 		{
+			name:     "vp8 codec",
+			filename: "bunny_vp8_854x480_30fps_10s_25crf_opus_96kbps.webm",
+			want: &config.VideoSpec{
+				Name:         "bunny",
+				Width:        854,
+				Height:       480,
+				FPS:          30,
+				Duration:     10,
+				Codec:        "vp8",
+				Bitrate:      "25crf",
+				AudioCodec:   "opus",
+				AudioBitrate: 96,
+				Container:    "webm",
+			},
+		},
+		{
 			name:     "with VBR bitrate",
 			filename: "bunny_h265_3840x2160_24fps_120s_8000vbr_aac_256kbps",
 			want: &config.VideoSpec{

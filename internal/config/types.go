@@ -53,23 +53,55 @@ var DefaultPregenSpecs = []VideoSpec{
 }
 
 var VideoCodecNameMap = map[string]string{
-	"av1":     "libaom-av1", // svt-av1 - faster encoding, limited bitrate options
-	"h264":    "libx264",
-	"h265":    "libx265",
-	"vp9":     "libvpx-vp9",
-	"novideo": "none",
+	"av1":     "libaom-av1", // mp4 + webm. svt-av1 - faster encoding, limited bitrate options
+	"h264":    "libx264",    // mp4 only
+	"h265":    "libx265",    // mp4 only
+	"vp8":     "libvpx",     // webm only
+	"vp9":     "libvpx-vp9", // mp4 + webm
+	"novideo": "none",       // any container
 }
 
 var AudioCodecNameMap = map[string]string{
-	"aac":     "aac",
-	"opus":    "libopus",
-	"vorbis":  "vorbis",
-	"noaudio": "none",
+	"aac":     "aac",       // mp4 only
+	"opus":    "libopus",   // mp4 + webm
+	"vorbis":  "libvorbis", // mp4 + webm, native "vorbis" encoder is experimental
+	"noaudio": "none",      // any container
 }
 
 var ValidVideoCodecs = slices.Collect(maps.Keys(VideoCodecNameMap))
 var ValidAudioCodecs = slices.Collect(maps.Keys(AudioCodecNameMap))
 var ValidContainers = []string{"mp4", "webm"}
+
+// Codecs each container can mux, a wrong pair produces an unplayable file
+var ContainerVideoCodecs = map[string][]string{
+	"mp4":  {"av1", "h264", "h265", "vp9", "novideo"},
+	"webm": {"av1", "vp8", "vp9", "novideo"},
+}
+
+var ContainerAudioCodecs = map[string][]string{
+	"mp4":  {"aac", "opus", "vorbis", "noaudio"},
+	"webm": {"opus", "vorbis", "noaudio"},
+}
+
+// ValidateContainerCompatibility checks codecs against the container, call after ApplyDefaultVideoSpec
+func ValidateContainerCompatibility(spec *VideoSpec) error {
+	videoCodecs, ok := ContainerVideoCodecs[spec.Container]
+	if !ok {
+		return fmt.Errorf("invalid container format: %s (valid formats: %v)", spec.Container, ValidContainers)
+	}
+
+	if !slices.Contains(videoCodecs, spec.Codec) {
+		return fmt.Errorf("video codec %s is not supported in %s container (supported: %v)",
+			spec.Codec, spec.Container, videoCodecs)
+	}
+
+	if audioCodecs := ContainerAudioCodecs[spec.Container]; !slices.Contains(audioCodecs, spec.AudioCodec) {
+		return fmt.Errorf("audio codec %s is not supported in %s container (supported: %v)",
+			spec.AudioCodec, spec.Container, audioCodecs)
+	}
+
+	return nil
+}
 
 type Resolution struct {
 	Width  int `json:"width"`
@@ -114,6 +146,12 @@ var VideoCodecArgs = map[string][]string{
 	"libx265": {
 		"-preset", "fast",
 		"-x265-params", "pools=+",
+	},
+	// vp8 has no tiling, deadline and cpu-used control speed
+	"libvpx": {
+		"-deadline", "good",
+		"-cpu-used", "2",
+		"-threads", "8",
 	},
 	"libvpx-vp9": {
 		"-speed", "4",

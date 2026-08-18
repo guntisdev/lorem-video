@@ -225,6 +225,11 @@
             <strong>Web player compatibility:</strong><br>
             <code>https://{{.Domain}}/test_1080p_vp9_30fps_30s_25crf_opus_128kbps.webm</code>
         </div>
+
+        <div class="example">
+            <strong>Legacy WebM playback:</strong><br>
+            <code>https://{{.Domain}}/bunny_480p_vp8_30fps_10s_25crf_vorbis_96kbps.webm</code>
+        </div>
         
         <div class="example">
             <strong>Audio player testing:</strong><br>
@@ -238,7 +243,8 @@
                 <li>Unconventional params transcodes on demand and stays in cache</li>
                 <li>First-time transcoding may take time depending on complexity</li>
                 <li>AV1 encoding is slower but produces smaller files</li>
-                <li><strong>License incompatibilities:</strong> Some codec/container combinations may fail due to FFmpeg licensing restrictions (e.g., H.264 with WebM). Errors are returned directly from FFmpeg.</li>
+                <li><strong>Codec/container pairing:</strong> MP4 carries h264, h265, vp9 or av1 with aac, opus or vorbis audio. WebM carries vp8, vp9 or av1 with opus or vorbis audio. Anything else (h264 in WebM, vp8 in MP4) returns 400 with the supported list.</li>
+                <li><strong>vp8 is WebM only</strong> - the container defaults to mp4, so request it with an explicit <code>.webm</code> extension.</li>
             </ul>
         </div>
     </div>

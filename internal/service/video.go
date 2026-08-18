@@ -74,6 +74,14 @@ func (s *VideoService) TranscodeFromParams(ctx context.Context, paramsStr string
 
 // Transcode performs video transcoding with the given VideoSpec and paths
 func (s *VideoService) Transcode(ctx context.Context, spec config.VideoSpec, inputPath, outputPath string) (<-chan string, <-chan error) {
+	// Fail early, FFmpeg cannot mux these codecs into this container
+	if err := config.ValidateContainerCompatibility(&spec); err != nil {
+		errCh := make(chan error, 1)
+		errCh <- err
+		close(errCh)
+		return nil, errCh
+	}
+
 	resultCh := make(chan string, 1)
 	errCh := make(chan error, 1)
 

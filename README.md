@@ -6,7 +6,7 @@ A video placeholder service for developers. Generate test videos with custom dim
 ## Features
 
 - **On-demand video generation** - Custom dimensions, codecs, and durations
-- **Multiple codecs/containers** - MP4, WebM, AV1, VP9, H.264, HEVC support
+- **Multiple codecs/containers** - MP4, WebM, AV1, VP9, VP8, H.264, HEVC support
 - **Partial streaming** - Videos start playing while being generated
 - **Caching** - Popular combinations are pregenerated, user specific videos cached after first request
 - **Developer friendly** - CORS `"Access-Control-Allow-Origin", "*"`
@@ -38,8 +38,18 @@ task build
 GET /{width}x{height}_{duration}s_{codec}_{quality}
 GET /800x600_30s_h264_25crf        # H.264 video
 GET /1920x1080_60s_vp9_23crf       # VP9 video
+GET /854x480_10s_vp8_25crf.webm    # VP8 video (WebM only)
 GET /bunny                         # Default test video
 ```
+
+Codecs and containers must be compatible, mismatches return `400`:
+
+| container | video codecs           | audio codecs       |
+| --------- | ---------------------- | ------------------ |
+| mp4       | h264, h265, vp9, av1   | aac, opus, vorbis  |
+| webm      | vp8, vp9, av1          | opus, vorbis       |
+
+The container defaults to `mp4`, so vp8 needs an explicit `.webm` extension.
 
 ### HLS Video
 ```
