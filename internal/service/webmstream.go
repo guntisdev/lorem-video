@@ -11,6 +11,20 @@ import (
 	"lorem.video/internal/config"
 )
 
+const wsEncodePeriods = 3
+
+type wsBitrateKbps struct {
+	Video int
+	Audio int
+}
+
+var wsBitrates = map[string]wsBitrateKbps{
+	"360p":  {Video: 500, Audio: 96},
+	"480p":  {Video: 800, Audio: 96},
+	"720p":  {Video: 2000, Audio: 128},
+	"1080p": {Video: 4000, Audio: 128},
+}
+
 func SliceLoopPeriod(clusters []WebMCluster, periodMs, clusterMs uint64) ([]WebMCluster, error) {
 	if len(clusters) == 0 {
 		return nil, fmt.Errorf("no clusters")
@@ -103,4 +117,43 @@ func countFrames(ctx context.Context, path string, want int) error {
 	}
 
 	return nil
+}
+
+func transcodeLoopWebM(ctx context.Context, bitrate wsBitrateKbps, inputPath, outputPath string) error {
+	gop := config.WSFPS * config.WSClusterMs / 1000
+	seconds := wsEncodePeriods * config.WSLoopMs / 1000
+
+	args := []string{
+		"-y",
+		"-loglevel", "warning",
+		"-stream_loop", strconv.Itoa(wsEncodePeriods - 1),
+		"-i", inputPath,
+		"-t", strconv.Itoa(seconds),
+		"-c:v", "libvpx",
+		"-b:v", strconv.Itoa(bitrate.Video) + "k",
+		"-deadline", "realtime",
+		"-cpu-used", "8",
+		"-r", strconv.Itoa(config.WSFPS),
+		"-g", strconv.Itoa(gop),
+		"-keyint_min", strconv.Itoa(gop),
+		"-force_key_frames", fmt.Sprintf("expr:gte(t,n_forced*%d)", config.WSClusterMs/1000),
+		"-c:a", "libopus",
+		"-b:a", strconv.Itoa(bitrate.Audio) + "k",
+		"-ac", "2",
+		"-f", "webm",
+		"-live", "1",
+		"-cluster_time_limit", strconv.Itoa(config.WSClusterMs),
+		"-cluster_size_limit", "100000000", // large so only cluster_time_limit splits clusters
+		outputPath,
+	}
+
+	cmd := exec.CommandContext(ctx, "ffmpeg", args...)
+	var stderr bytes.Buffer
+	cmd.Stderr = &stderr
+
+	if err := cmd.Run(); err != nil {
+		return fmt.Errorf("ffmpeg failed: %w\nOutput: %s", err, stderr.String())
+	}
+
+	return countFrames(ctx, outputPath, seconds*config.WSFPS)
 }
