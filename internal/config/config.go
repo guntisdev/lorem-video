@@ -20,11 +20,10 @@ const (
 const (
 	WSInit        = "init.webm"
 	WSChunkFormat = "chunk_%03d.webm"
-	WSManifest    = "manifest.json"
 )
 
 const (
-	WSLoopMs    = 6000 // must divide by frame duration (40ms) and opus frame (20ms)
+	WSLoopMs    = 30000 // must divide by frame duration (40ms) and opus frame (20ms)
 	WSClusterMs = 1000
 	WSFPS       = 25
 )
