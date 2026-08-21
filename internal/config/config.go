@@ -16,10 +16,24 @@ const (
 	HLSInit           = "init.mp4"
 )
 
+// WebSocket WebM stream file naming
+const (
+	WSInit        = "init.webm"
+	WSChunkFormat = "chunk_%03d.webm"
+	WSManifest    = "manifest.json"
+)
+
+const (
+	WSLoopMs    = 6000 // must divide by frame duration (40ms) and opus frame (20ms)
+	WSClusterMs = 1000
+	WSFPS       = 25
+)
+
 type Paths struct {
 	Data        string
 	Video       string
 	Stream      string
+	WSStream    string
 	SourceVideo string
 	Logs        string
 	LogsStats   string
@@ -50,6 +64,7 @@ func initPaths() *Paths {
 		Data:        dataDir,
 		Video:       filepath.Join(dataDir, "video"),
 		Stream:      filepath.Join(dataDir, "stream"),
+		WSStream:    filepath.Join(dataDir, "wsstream"),
 		SourceVideo: sourceVideoDir,
 		Logs:        filepath.Join(dataDir, "logs"),
 		LogsStats:   filepath.Join(dataDir, "logs", "stats"),
@@ -83,6 +98,7 @@ func EnsureDirectories() error {
 		AppPaths.SourceVideo,
 		AppPaths.Video,
 		AppPaths.Stream,
+		AppPaths.WSStream,
 		AppPaths.Logs,
 		AppPaths.LogsStats,
 		AppPaths.LogsBots,
