@@ -1,18 +1,29 @@
 package rest
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"net/http"
 	"os"
 	"path/filepath"
 	"strconv"
+	"strings"
+	"time"
+
+	"github.com/coder/websocket"
 
 	"lorem.video/internal/config"
+	"lorem.video/internal/service"
 )
 
 const wsVideoCodec = "vp8"
 const wsAudioCodec = "opus"
+
+// how many seconds ahead of the wall clock to keep the client buffered
+const wsLeadChunks = 3
+
+const wsWriteTimeout = 10 * time.Second
 
 type wsManifest struct {
 	Name    string           `json:"name"`
@@ -69,4 +80,88 @@ func buildWSManifest(videoName string) wsManifest {
 	}
 
 	return wsManifest{Name: videoName + "_auto", Streams: streams}
+}
+
+func (rest *Rest) ServeWSStream(w http.ResponseWriter, r *http.Request) {
+	videoName, resKey, ok := parseWSStreamName(r.PathValue("streamName"))
+	if !ok {
+		http.Error(w, "Stream not found", http.StatusNotFound)
+		return
+	}
+
+	streamDir := filepath.Join(config.AppPaths.WSStream, videoName, resKey)
+
+	initSegment, err := os.ReadFile(filepath.Join(streamDir, config.WSInit))
+	if err != nil {
+		http.Error(w, "Stream not found", http.StatusNotFound)
+		return
+	}
+
+	chunks, err := filepath.Glob(filepath.Join(streamDir, "chunk_*.webm"))
+	if err != nil || len(chunks) == 0 {
+		http.Error(w, "No chunks found", http.StatusNotFound)
+		return
+	}
+	chunkCount := int64(len(chunks))
+
+	conn, err := websocket.Accept(w, r, &websocket.AcceptOptions{OriginPatterns: []string{"*"}})
+	if err != nil {
+		return
+	}
+	defer conn.CloseNow()
+
+	// discards client frames but keeps pings and close handled
+	ctx := conn.CloseRead(r.Context())
+
+	if err := wsWrite(ctx, conn, initSegment); err != nil {
+		return
+	}
+
+	ticker := time.NewTicker(time.Duration(config.WSClusterMs) * time.Millisecond)
+	defer ticker.Stop()
+
+	next := time.Now().Unix()
+
+	for {
+		for target := time.Now().Unix() + wsLeadChunks; next <= target; next++ {
+			chunk, err := os.ReadFile(filepath.Join(streamDir, fmt.Sprintf(config.WSChunkFormat, next%chunkCount)))
+			if err != nil {
+				return
+			}
+			if err := service.PatchClusterTimecode(chunk, uint64(next)*uint64(config.WSClusterMs)); err != nil {
+				return
+			}
+			if err := wsWrite(ctx, conn, chunk); err != nil {
+				return
+			}
+		}
+
+		select {
+		case <-ctx.Done():
+			return
+		case <-ticker.C:
+		}
+	}
+}
+
+func wsWrite(ctx context.Context, conn *websocket.Conn, data []byte) error {
+	ctx, cancel := context.WithTimeout(ctx, wsWriteTimeout)
+	defer cancel()
+	return conn.Write(ctx, websocket.MessageBinary, data)
+}
+
+func parseWSStreamName(streamName string) (videoName, resKey string, ok bool) {
+	i := strings.LastIndex(streamName, "_")
+	if i < 1 || strings.Contains(streamName, "..") {
+		return "", "", false
+	}
+
+	suffix := streamName[i+1:]
+	for key, s := range config.WSStreamSuffix {
+		if s == suffix {
+			return streamName[:i], key, true
+		}
+	}
+
+	return "", "", false
 }

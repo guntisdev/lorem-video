@@ -115,6 +115,15 @@ func (rw *responseWriter) Write(b []byte) (int, error) {
 	return n, err
 }
 
+// needed for websocket upgrades, which hijack the connection
+func (rw *responseWriter) Hijack() (net.Conn, *bufio.ReadWriter, error) {
+	h, ok := rw.ResponseWriter.(http.Hijacker)
+	if !ok {
+		return nil, nil, fmt.Errorf("ResponseWriter does not implement http.Hijacker")
+	}
+	return h.Hijack()
+}
+
 func StatsMiddleware(logPath string) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		logger, err := NewStatsLogger(logPath)
