@@ -13,18 +13,6 @@ import (
 
 const wsEncodePeriods = 3
 
-type wsBitrateKbps struct {
-	Video int
-	Audio int
-}
-
-var wsBitrates = map[string]wsBitrateKbps{
-	"360p":  {Video: 500, Audio: 96},
-	"480p":  {Video: 800, Audio: 96},
-	"720p":  {Video: 2000, Audio: 128},
-	"1080p": {Video: 4000, Audio: 128},
-}
-
 func SliceLoopPeriod(clusters []WebMCluster, periodMs, clusterMs uint64) ([]WebMCluster, error) {
 	if len(clusters) == 0 {
 		return nil, fmt.Errorf("no clusters")
@@ -119,7 +107,7 @@ func countFrames(ctx context.Context, path string, want int) error {
 	return nil
 }
 
-func transcodeLoopWebM(ctx context.Context, bitrate wsBitrateKbps, inputPath, outputPath string) error {
+func transcodeLoopWebM(ctx context.Context, bitrate config.WSBitrate, inputPath, outputPath string) error {
 	gop := config.WSFPS * config.WSClusterMs / 1000
 	seconds := wsEncodePeriods * config.WSLoopMs / 1000
 

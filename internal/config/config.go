@@ -29,6 +29,28 @@ const (
 	WSFPS       = 25
 )
 
+type WSBitrate struct {
+	Video int
+	Audio int
+}
+
+// ordered low to high, drives both pregeneration and the manifest
+var WSRenditions = []string{"360p", "480p", "720p", "1080p"}
+
+var WSBitrates = map[string]WSBitrate{
+	"360p":  {Video: 500, Audio: 96},
+	"480p":  {Video: 800, Audio: 96},
+	"720p":  {Video: 2000, Audio: 128},
+	"1080p": {Video: 4000, Audio: 128},
+}
+
+var WSStreamSuffix = map[string]string{
+	"360p":  "low",
+	"480p":  "med",
+	"720p":  "hi",
+	"1080p": "hd",
+}
+
 type Paths struct {
 	Data        string
 	Video       string
@@ -54,6 +76,17 @@ func GetBaseURL() string {
 		baseURL = fmt.Sprintf("http://localhost:%d", Port)
 	}
 	return baseURL
+}
+
+func GetWSBaseURL() string {
+	base := GetBaseURL()
+	if host, ok := strings.CutPrefix(base, "https://"); ok {
+		return "wss://" + host
+	}
+	if host, ok := strings.CutPrefix(base, "http://"); ok {
+		return "ws://" + host
+	}
+	return base
 }
 
 func initPaths() *Paths {
