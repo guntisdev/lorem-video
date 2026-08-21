@@ -32,6 +32,12 @@ func StartupPregeneration() {
 			log.Printf("❌ Failed to pregenerate HLS streams: %v", err)
 			return
 		}
+
+		_, err = PregenerateAllWebMStream(ctx)
+		if err != nil {
+			log.Printf("❌ Failed to pregenerate WebSocket streams: %v", err)
+			return
+		}
 	}()
 }
 
@@ -313,4 +319,68 @@ func isVideoVertical(inputPath string) (bool, error) {
 	isRotatedPortrait := math.Abs(float64(rotation)) == 90
 
 	return isNaturalPortrait || isRotatedPortrait, nil
+}
+
+func PregenerateAllWebMStream(ctx context.Context) (map[string][]string, error) {
+	sourceFiles, err := config.GetSourceVideoFiles()
+	if err != nil {
+		return nil, fmt.Errorf("failed to get source video files: %w", err)
+	}
+
+	results := make(map[string][]string)
+
+	for _, sourceFile := range sourceFiles {
+		generated, err := PregenerateWebMStream(ctx, sourceFile)
+		if err != nil {
+			log.Printf("❌ Failed to pregenerate WebSocket streams for %s: %v", filepath.Base(sourceFile), err)
+			continue
+		}
+
+		results[filepath.Base(sourceFile)] = generated
+	}
+
+	return results, nil
+}
+
+func PregenerateWebMStream(ctx context.Context, inputPath string) ([]string, error) {
+	filenameNoExt := strings.TrimSuffix(filepath.Base(inputPath), filepath.Ext(inputPath))
+	outputDir := filepath.Join(config.AppPaths.WSStream, filenameNoExt)
+
+	if err := os.MkdirAll(outputDir, 0755); err != nil {
+		return nil, fmt.Errorf("failed to create output directory: %w", err)
+	}
+
+	isVertical, err := isVideoVertical(inputPath)
+	if err != nil {
+		log.Printf("⚠️  Failed to detect video orientation for %s, using default resolutions: %v", filenameNoExt, err)
+		isVertical = false
+	}
+
+	var generated []string
+
+	for _, resKey := range config.WSRenditions {
+		resolution := config.Resolutions[resKey]
+		if isVertical {
+			resolution.Width, resolution.Height = resolution.Height, resolution.Width
+		}
+
+		resDir := filepath.Join(outputDir, resKey)
+		if _, err := os.Stat(filepath.Join(resDir, config.WSInit)); err == nil {
+			generated = append(generated, resKey+" (existing)")
+			continue
+		}
+
+		if err := os.MkdirAll(resDir, 0755); err != nil {
+			return nil, fmt.Errorf("failed to create directory %s: %w", resDir, err)
+		}
+
+		if err := generateWSStream(ctx, resolution, config.WSBitrates[resKey], inputPath, resDir); err != nil {
+			return nil, fmt.Errorf("failed to generate %s stream: %w", resKey, err)
+		}
+
+		generated = append(generated, resKey)
+		log.Printf("✅ Generated WebSocket stream %s for %s", resKey, filenameNoExt)
+	}
+
+	return generated, nil
 }

@@ -4,7 +4,9 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"os"
 	"os/exec"
+	"path/filepath"
 	"strconv"
 	"strings"
 
@@ -144,4 +146,47 @@ func transcodeLoopWebM(ctx context.Context, bitrate config.WSBitrate, inputPath,
 	}
 
 	return countFrames(ctx, outputPath, seconds*config.WSFPS)
+}
+
+func generateWSStream(ctx context.Context, res config.Resolution, bitrate config.WSBitrate, inputPath, outputDir string) error {
+	tmpDir, err := os.MkdirTemp(config.AppPaths.Tmp, "wsstream-")
+	if err != nil {
+		return err
+	}
+	defer os.RemoveAll(tmpDir)
+
+	loopPath := filepath.Join(tmpDir, "loop.mkv")
+	if err := transcodeLoopSource(ctx, res, inputPath, loopPath); err != nil {
+		return err
+	}
+
+	webmPath := filepath.Join(tmpDir, "loop.webm")
+	if err := transcodeLoopWebM(ctx, bitrate, loopPath, webmPath); err != nil {
+		return err
+	}
+
+	data, err := os.ReadFile(webmPath)
+	if err != nil {
+		return err
+	}
+
+	split, err := SplitWebM(data)
+	if err != nil {
+		return err
+	}
+
+	clusters, err := SliceLoopPeriod(split.Clusters, config.WSLoopMs, config.WSClusterMs)
+	if err != nil {
+		return err
+	}
+
+	for i, c := range clusters {
+		name := fmt.Sprintf(config.WSChunkFormat, i)
+		if err := os.WriteFile(filepath.Join(outputDir, name), c.Data, 0644); err != nil {
+			return err
+		}
+	}
+
+	// written last, a partial run then has no init and is regenerated
+	return os.WriteFile(filepath.Join(outputDir, config.WSInit), split.Init, 0644)
 }

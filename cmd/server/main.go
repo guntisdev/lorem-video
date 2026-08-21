@@ -32,6 +32,7 @@ func main() {
 	mux.HandleFunc("GET /getInfo/{name}", rest.GetVideoInfo)
 	mux.HandleFunc("GET /transcode/{params}", rest.Transcode)
 	mux.HandleFunc("GET /hls/{videoName}/{path...}", rest.ServeHLS)
+	mux.HandleFunc("GET /ws/{videoName}/manifest-ws2.json", rest.ServeWSManifest)
 	mux.HandleFunc("GET /{params}", rest.ServeVideo)
 
 	statsMiddleware := stats.StatsMiddleware(config.AppPaths.LogsStats)
