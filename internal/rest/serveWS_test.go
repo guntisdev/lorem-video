@@ -176,3 +176,36 @@ func TestParseWSStreamName(t *testing.T) {
 		}
 	}
 }
+
+func TestServeWSStreamIgnoresClientMessages(t *testing.T) {
+	srv := newWSTestServer(t)
+	defer srv.Close()
+
+	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
+	defer cancel()
+
+	url := "ws" + strings.TrimPrefix(srv.URL, "http") + "/ws/bunny_hi/websocketstream2?vc=vp8&ac=opus"
+	conn, _, err := websocket.Dial(ctx, url, nil)
+	if err != nil {
+		t.Fatalf("dial: %v", err)
+	}
+	defer conn.CloseNow()
+
+	if _, _, err := conn.Read(ctx); err != nil {
+		t.Fatalf("read init: %v", err)
+	}
+
+	// a player wiring up its own control channel must not kill the stream
+	if err := conn.Write(ctx, websocket.MessageText, []byte(`{"cmd":"play"}`)); err != nil {
+		t.Fatalf("write text: %v", err)
+	}
+	if err := conn.Write(ctx, websocket.MessageBinary, []byte{0x01, 0x02, 0x03}); err != nil {
+		t.Fatalf("write binary: %v", err)
+	}
+
+	for i := 0; i < 3; i++ {
+		if _, _, err := conn.Read(ctx); err != nil {
+			t.Fatalf("read chunk %d after client message: %v", i, err)
+		}
+	}
+}

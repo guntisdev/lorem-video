@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"io"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -110,8 +111,8 @@ func (rest *Rest) ServeWSStream(w http.ResponseWriter, r *http.Request) {
 	}
 	defer conn.CloseNow()
 
-	// discards client frames but keeps pings and close handled
-	ctx := conn.CloseRead(r.Context())
+	// player control messages are irrelevant here, but must be drained so reads keep flowing
+	ctx := wsDrainReads(r.Context(), conn)
 
 	if err := wsWrite(ctx, conn, initSegment); err != nil {
 		return
@@ -142,6 +143,27 @@ func (rest *Rest) ServeWSStream(w http.ResponseWriter, r *http.Request) {
 		case <-ticker.C:
 		}
 	}
+}
+
+// discards anything the client sends and cancels the returned ctx once it goes away
+func wsDrainReads(ctx context.Context, conn *websocket.Conn) context.Context {
+	ctx, cancel := context.WithCancel(ctx)
+
+	go func() {
+		defer cancel()
+
+		for {
+			_, reader, err := conn.Reader(ctx)
+			if err != nil {
+				return
+			}
+			if _, err := io.Copy(io.Discard, reader); err != nil {
+				return
+			}
+		}
+	}()
+
+	return ctx
 }
 
 func wsWrite(ctx context.Context, conn *websocket.Conn, data []byte) error {
