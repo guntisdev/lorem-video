@@ -3,6 +3,7 @@ package rest
 import (
 	"context"
 	"encoding/binary"
+	"encoding/json"
 	"fmt"
 	"net/http"
 	"net/http/httptest"
@@ -81,6 +82,58 @@ func newWSTestServer(t *testing.T) *httptest.Server {
 	return httptest.NewServer(handler)
 }
 
+func wsDial(t *testing.T, ctx context.Context, srv *httptest.Server, stream string) *websocket.Conn {
+	t.Helper()
+
+	url := "ws" + strings.TrimPrefix(srv.URL, "http") + "/ws/" + stream + "/websocketstream2?vc=vp8&ac=opus"
+	conn, _, err := websocket.Dial(ctx, url, nil)
+	if err != nil {
+		t.Fatalf("dial: %v", err)
+	}
+	t.Cleanup(func() { conn.CloseNow() })
+	return conn
+}
+
+func wsSendPlay(t *testing.T, ctx context.Context, conn *websocket.Conn, requestID int64, stream string) wsPlayStatus {
+	t.Helper()
+
+	cmd, err := json.Marshal(wsCommand{
+		EventType:        wsEventPlay,
+		RequestID:        requestID,
+		RequestTimestamp: time.Now().UnixMilli(),
+		Stream:           stream,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := conn.Write(ctx, websocket.MessageText, cmd); err != nil {
+		t.Fatalf("write PLAY: %v", err)
+	}
+
+	typ, data, err := conn.Read(ctx)
+	if err != nil {
+		t.Fatalf("read PLAY_STATUS: %v", err)
+	}
+	if typ != websocket.MessageText {
+		t.Errorf("PLAY_STATUS type = %v, want text", typ)
+	}
+
+	var status wsPlayStatus
+	if err := json.Unmarshal(data, &status); err != nil {
+		t.Fatalf("unmarshal %q: %v", data, err)
+	}
+	if status.EventType != wsEventPlayStatus {
+		t.Errorf("eventType = %q, want %q", status.EventType, wsEventPlayStatus)
+	}
+	if status.InReplyTo != requestID {
+		t.Errorf("inReplyTo = %d, want %d", status.InReplyTo, requestID)
+	}
+	if status.Timestamp == 0 {
+		t.Error("timeStamp = 0, want a wall clock value")
+	}
+	return status
+}
+
 func TestServeWSStream(t *testing.T) {
 	srv := newWSTestServer(t)
 	defer srv.Close()
@@ -88,12 +141,11 @@ func TestServeWSStream(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
 	defer cancel()
 
-	url := "ws" + strings.TrimPrefix(srv.URL, "http") + "/ws/bunny_hi/websocketstream2?vc=vp8&ac=opus"
-	conn, _, err := websocket.Dial(ctx, url, nil)
-	if err != nil {
-		t.Fatalf("dial: %v", err)
+	conn := wsDial(t, ctx, srv, "bunny_hi")
+
+	if status := wsSendPlay(t, ctx, conn, 1, "bunny_hi"); !status.Success || !status.Playing {
+		t.Fatalf("PLAY_STATUS = %+v, want success and playing", status)
 	}
-	defer conn.CloseNow()
 
 	typ, data, err := conn.Read(ctx)
 	if err != nil {
@@ -184,12 +236,8 @@ func TestServeWSStreamIgnoresClientMessages(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
 	defer cancel()
 
-	url := "ws" + strings.TrimPrefix(srv.URL, "http") + "/ws/bunny_hi/websocketstream2?vc=vp8&ac=opus"
-	conn, _, err := websocket.Dial(ctx, url, nil)
-	if err != nil {
-		t.Fatalf("dial: %v", err)
-	}
-	defer conn.CloseNow()
+	conn := wsDial(t, ctx, srv, "bunny_hi")
+	wsSendPlay(t, ctx, conn, 1, "bunny_hi")
 
 	if _, _, err := conn.Read(ctx); err != nil {
 		t.Fatalf("read init: %v", err)
@@ -207,5 +255,90 @@ func TestServeWSStreamIgnoresClientMessages(t *testing.T) {
 		if _, _, err := conn.Read(ctx); err != nil {
 			t.Fatalf("read chunk %d after client message: %v", i, err)
 		}
+	}
+}
+
+func TestServeWSStreamWaitsForPlay(t *testing.T) {
+	srv := newWSTestServer(t)
+	defer srv.Close()
+
+	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
+	defer cancel()
+
+	conn := wsDial(t, ctx, srv, "bunny_hi")
+
+	// a cancelled Read would close the connection, so one goroutine owns the read side
+	type msg struct {
+		typ  websocket.MessageType
+		data []byte
+	}
+	msgs := make(chan msg, 4)
+	go func() {
+		for {
+			typ, data, err := conn.Read(ctx)
+			if err != nil {
+				return
+			}
+			msgs <- msg{typ, data}
+		}
+	}()
+
+	// junk before PLAY must neither be answered nor start the stream
+	if err := conn.Write(ctx, websocket.MessageText, []byte(`{"eventType":"VOLUME","requestId":7}`)); err != nil {
+		t.Fatalf("write junk: %v", err)
+	}
+	if err := conn.Write(ctx, websocket.MessageText, []byte("not json at all")); err != nil {
+		t.Fatalf("write junk: %v", err)
+	}
+
+	select {
+	case m := <-msgs:
+		t.Fatalf("got %v message %q before PLAY, want silence", m.typ, m.data)
+	case <-time.After(2 * time.Second):
+	}
+
+	// and the stream still starts once PLAY finally arrives
+	cmd, err := json.Marshal(wsCommand{EventType: wsEventPlay, RequestID: 42, Stream: "bunny_hi"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := conn.Write(ctx, websocket.MessageText, cmd); err != nil {
+		t.Fatalf("write PLAY: %v", err)
+	}
+
+	m := <-msgs
+	var status wsPlayStatus
+	if err := json.Unmarshal(m.data, &status); err != nil {
+		t.Fatalf("unmarshal %q: %v", m.data, err)
+	}
+	if status.EventType != wsEventPlayStatus || status.InReplyTo != 42 || !status.Success || !status.Playing {
+		t.Errorf("PLAY_STATUS = %+v, want PLAY_STATUS for 42, success and playing", status)
+	}
+
+	if m := <-msgs; m.typ != websocket.MessageBinary || string(m.data) != "INIT-SEGMENT" {
+		t.Errorf("first push after PLAY = (%v, %q), want binary INIT-SEGMENT", m.typ, m.data)
+	}
+}
+
+func TestServeWSStreamRejectsMismatchedStream(t *testing.T) {
+	srv := newWSTestServer(t)
+	defer srv.Close()
+
+	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
+	defer cancel()
+
+	conn := wsDial(t, ctx, srv, "bunny_hi")
+
+	status := wsSendPlay(t, ctx, conn, 3, "bunny_hd")
+	if status.Success || status.Playing {
+		t.Errorf("PLAY_STATUS = %+v, want success and playing false", status)
+	}
+
+	// a retry with the right stream is still accepted on the same connection
+	if status := wsSendPlay(t, ctx, conn, 4, "bunny_hi"); !status.Success || !status.Playing {
+		t.Fatalf("retry PLAY_STATUS = %+v, want success and playing", status)
+	}
+	if _, data, err := conn.Read(ctx); err != nil || string(data) != "INIT-SEGMENT" {
+		t.Fatalf("read init after retry = (%q, %v)", data, err)
 	}
 }

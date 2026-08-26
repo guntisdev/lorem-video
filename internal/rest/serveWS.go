@@ -26,6 +26,29 @@ const wsLeadChunks = 3
 
 const wsWriteTimeout = 10 * time.Second
 
+// how long a client may sit connected without asking to play
+const wsPlayTimeout = 30 * time.Second
+
+const (
+	wsEventPlay       = "PLAY"
+	wsEventPlayStatus = "PLAY_STATUS"
+)
+
+type wsCommand struct {
+	EventType        string `json:"eventType"`
+	RequestID        int64  `json:"requestId"`
+	RequestTimestamp int64  `json:"requestTimestamp"`
+	Stream           string `json:"stream"`
+}
+
+type wsPlayStatus struct {
+	EventType string `json:"eventType"`
+	InReplyTo int64  `json:"inReplyTo"`
+	Playing   bool   `json:"playing"`
+	Success   bool   `json:"success"`
+	Timestamp int64  `json:"timeStamp"`
+}
+
 type wsManifest struct {
 	Name    string           `json:"name"`
 	Streams []wsManifestItem `json:"streams"`
@@ -84,7 +107,9 @@ func buildWSManifest(videoName string) wsManifest {
 }
 
 func (rest *Rest) ServeWSStream(w http.ResponseWriter, r *http.Request) {
-	videoName, resKey, ok := parseWSStreamName(r.PathValue("streamName"))
+	streamName := r.PathValue("streamName")
+
+	videoName, resKey, ok := parseWSStreamName(streamName)
 	if !ok {
 		http.Error(w, "Stream not found", http.StatusNotFound)
 		return
@@ -111,7 +136,11 @@ func (rest *Rest) ServeWSStream(w http.ResponseWriter, r *http.Request) {
 	}
 	defer conn.CloseNow()
 
-	// player control messages are irrelevant here, but must be drained so reads keep flowing
+	if !wsAwaitPlay(r.Context(), conn, streamName) {
+		return
+	}
+
+	// further player control messages are irrelevant here, but must be drained so reads keep flowing
 	ctx := wsDrainReads(r.Context(), conn)
 
 	if err := wsWrite(ctx, conn, initSegment); err != nil {
@@ -145,6 +174,42 @@ func (rest *Rest) ServeWSStream(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+// blocks until the client asks to play this stream, ignoring whatever else it sends
+func wsAwaitPlay(ctx context.Context, conn *websocket.Conn, streamName string) bool {
+	ctx, cancel := context.WithTimeout(ctx, wsPlayTimeout)
+	defer cancel()
+
+	for {
+		_, data, err := conn.Read(ctx)
+		if err != nil {
+			return false
+		}
+
+		var cmd wsCommand
+		if err := json.Unmarshal(data, &cmd); err != nil || cmd.EventType != wsEventPlay {
+			continue
+		}
+
+		// an omitted stream means the client is happy with whatever this URL serves
+		accepted := cmd.Stream == "" || cmd.Stream == streamName
+
+		err = wsWriteJSON(ctx, conn, wsPlayStatus{
+			EventType: wsEventPlayStatus,
+			InReplyTo: cmd.RequestID,
+			Playing:   accepted,
+			Success:   accepted,
+			Timestamp: time.Now().UnixMilli(),
+		})
+		if err != nil {
+			return false
+		}
+
+		if accepted {
+			return true
+		}
+	}
+}
+
 // discards anything the client sends and cancels the returned ctx once it goes away
 func wsDrainReads(ctx context.Context, conn *websocket.Conn) context.Context {
 	ctx, cancel := context.WithCancel(ctx)
@@ -170,6 +235,17 @@ func wsWrite(ctx context.Context, conn *websocket.Conn, data []byte) error {
 	ctx, cancel := context.WithTimeout(ctx, wsWriteTimeout)
 	defer cancel()
 	return conn.Write(ctx, websocket.MessageBinary, data)
+}
+
+func wsWriteJSON(ctx context.Context, conn *websocket.Conn, v any) error {
+	data, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+
+	ctx, cancel := context.WithTimeout(ctx, wsWriteTimeout)
+	defer cancel()
+	return conn.Write(ctx, websocket.MessageText, data)
 }
 
 func parseWSStreamName(streamName string) (videoName, resKey string, ok bool) {
