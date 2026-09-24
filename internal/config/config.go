@@ -173,13 +173,3 @@ func GetSourceVideoFiles() ([]string, error) {
 
 	return videoFiles, nil
 }
-
-func GetWSCORSOrigins() []string {
-	var origins []string
-	for _, o := range strings.Split(os.Getenv("WS_CORS_ORIGINS"), ",") {
-		if o = strings.TrimSpace(o); o != "" {
-			origins = append(origins, o)
-		}
-	}
-	return origins
-}
